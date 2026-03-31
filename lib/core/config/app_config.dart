@@ -1,12 +1,13 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 /// アプリケーション全体で使用される環境変数を管理するクラス
 class AppConfig {
   /// Cloudflare Workers APIのベースURL
-  static String get apiBaseUrl => dotenv.env['API_BASE_URL'] ?? '';
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://car-library-api.y-yoshida1031.workers.dev',
+  );
 
   /// アプリ名
-  static String get appName => dotenv.env['APP_NAME'] ?? '皆の車博覧会';
+  static const String appName = '皆の車博覧会';
 
   /// 環境変数が正しく設定されているかをチェック
   static bool get isConfigured => apiBaseUrl.isNotEmpty;
