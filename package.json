@@ -23,6 +23,7 @@
     "wrangler": "^3.57.1"
   },
   "dependencies": {
-    "@cf-wasm/photon": "^0.3.4"
+    "@cf-wasm/photon": "^0.3.4",
+    "jose": "^6.2.2"
   }
 }
