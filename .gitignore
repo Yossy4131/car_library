@@ -46,3 +46,14 @@ app.*.map.json
 
 # Cloudflare Workers
 .wrangler/
+
+# Environment variables
+.env
+
+# Node.js
+node_modules/
+package-lock.json
+
+# Development files
+test_data.sql
+*.sql.backup
