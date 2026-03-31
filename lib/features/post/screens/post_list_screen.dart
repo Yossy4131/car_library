@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:car_library/features/post/providers/post_provider.dart';
 import 'package:car_library/features/post/widgets/post_card.dart';
+import 'package:car_library/features/post/screens/create_post_screen.dart';
 
 /// 投稿一覧画面
 class PostListScreen extends HookConsumerWidget {
@@ -10,9 +11,7 @@ class PostListScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 投稿一覧を取得
-    final postsAsync = ref.watch(
-      postsProvider(const PostsQueryParams()),
-    );
+    final postsAsync = ref.watch(postsProvider(const PostsQueryParams()));
 
     return Scaffold(
       appBar: AppBar(
@@ -23,9 +22,9 @@ class PostListScreen extends HookConsumerWidget {
             icon: const Icon(Icons.filter_list),
             onPressed: () {
               // TODO: フィルター機能の実装
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('フィルター機能は今後実装予定です')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('フィルター機能は今後実装予定です')));
             },
           ),
         ],
@@ -38,10 +37,7 @@ class PostListScreen extends HookConsumerWidget {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              Text(
-                'エラーが発生しました',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text('エラーが発生しました', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
@@ -65,7 +61,11 @@ class PostListScreen extends HookConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.directions_car, size: 64, color: Colors.grey),
+                  const Icon(
+                    Icons.directions_car,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'まだ投稿がありません',
@@ -95,9 +95,8 @@ class PostListScreen extends HookConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // TODO: 新規投稿画面への遷移
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('投稿機能は今後実装予定です')),
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const CreatePostScreen()),
           );
         },
         icon: const Icon(Icons.add_a_photo),

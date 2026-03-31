@@ -19,9 +19,7 @@ class ApiService {
 
   /// 共通のHTTPヘッダーを取得
   Map<String, String> _getHeaders({String? authToken}) {
-    final headers = {
-      'Content-Type': 'application/json',
-    };
+    final headers = {'Content-Type': 'application/json'};
     if (authToken != null) {
       headers['Authorization'] = 'Bearer $authToken';
     }
@@ -29,14 +27,18 @@ class ApiService {
   }
 
   /// エラーハンドリング付きのGETリクエスト
-  Future<Map<String, dynamic>> _get(String path, {Map<String, String>? queryParams}) async {
-    final uri = Uri.parse('$_baseUrl$path').replace(queryParameters: queryParams);
-    
+  Future<Map<String, dynamic>> _get(
+    String path, {
+    Map<String, String>? queryParams,
+  }) async {
+    final uri = Uri.parse(
+      '$_baseUrl$path',
+    ).replace(queryParameters: queryParams);
+
     try {
-      final response = await _client.get(
-        uri,
-        headers: _getHeaders(),
-      ).timeout(Duration(seconds: AppConstants.apiTimeout));
+      final response = await _client
+          .get(uri, headers: _getHeaders())
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
 
       if (response.statusCode == 200) {
         return json.decode(response.body) as Map<String, dynamic>;
@@ -54,15 +56,16 @@ class ApiService {
   }
 
   /// エラーハンドリング付きのPOSTリクエスト
-  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> _post(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     final uri = Uri.parse('$_baseUrl$path');
-    
+
     try {
-      final response = await _client.post(
-        uri,
-        headers: _getHeaders(),
-        body: json.encode(body),
-      ).timeout(Duration(seconds: AppConstants.apiTimeout));
+      final response = await _client
+          .post(uri, headers: _getHeaders(), body: json.encode(body))
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body) as Map<String, dynamic>;
@@ -82,12 +85,11 @@ class ApiService {
   /// エラーハンドリング付きのDELETEリクエスト
   Future<Map<String, dynamic>> _delete(String path) async {
     final uri = Uri.parse('$_baseUrl$path');
-    
+
     try {
-      final response = await _client.delete(
-        uri,
-        headers: _getHeaders(),
-      ).timeout(Duration(seconds: AppConstants.apiTimeout));
+      final response = await _client
+          .delete(uri, headers: _getHeaders())
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
 
       if (response.statusCode == 200) {
         return json.decode(response.body) as Map<String, dynamic>;
@@ -161,9 +163,170 @@ class ApiService {
     return (data['makers'] as List).cast<String>();
   }
 
+  // ========== 画像アップロード関連のAPI ==========
+
+  /// 画像をアップロード（オプションでAIマスキング）
+  Future<ImageUploadResult> uploadImage(
+    List<int> imageBytes,
+    String fileName, {
+    bool enableMasking = false,
+    List<MaskingBox>? maskingRects,
+  }) async {
+    final uri = Uri.parse(
+      '$_baseUrl/upload',
+    ).replace(queryParameters: enableMasking ? {'mask': 'true'} : null);
+
+    try {
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(
+        http.MultipartFile.fromBytes('file', imageBytes, filename: fileName),
+      );
+
+      // 手動指定のマスキング領域がある場合は送信
+      if (maskingRects != null && maskingRects.isNotEmpty) {
+        final rectsJson = json.encode(
+          maskingRects
+              .map(
+                (rect) => {
+                  'x': rect.x,
+                  'y': rect.y,
+                  'width': rect.width,
+                  'height': rect.height,
+                },
+              )
+              .toList(),
+        );
+        request.fields['maskingRects'] = rectsJson;
+      }
+
+      final streamedResponse = await request.send().timeout(
+        Duration(seconds: AppConstants.apiTimeout * 2), // 画像アップロードは時間がかかる
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final imageUrl = data['imageUrl'] as String;
+        final originalImageUrl = data['originalImageUrl'] as String?;
+        final detectedCount = data['detectedCount'] as int? ?? 0;
+        final masked = data['masked'] as bool? ?? false;
+        final detectedBoxes =
+            (data['detectedBoxes'] as List<dynamic>?)
+                ?.map((box) => MaskingBox.fromJson(box as Map<String, dynamic>))
+                .toList() ??
+            [];
+
+        // 相対パスを絶対パスに変換
+        return ImageUploadResult(
+          imageUrl: imageUrl.startsWith('http')
+              ? imageUrl
+              : '$_baseUrl$imageUrl',
+          originalImageUrl:
+              originalImageUrl != null && !originalImageUrl.startsWith('http')
+              ? '$_baseUrl$originalImageUrl'
+              : originalImageUrl,
+          detectedCount: detectedCount,
+          masked: masked,
+          detectedBoxes: detectedBoxes,
+        );
+      } else {
+        final error = json.decode(response.body);
+        throw ApiException(
+          error['error'] ?? 'Upload failed',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error during upload: $e', 0);
+    }
+  }
+
+  /// AIでナンバープレートを検出（アップロードなし）
+  Future<List<MaskingBox>> detectLicensePlates(
+    List<int> imageBytes,
+    String fileName,
+  ) async {
+    final uri = Uri.parse('$_baseUrl/detect');
+
+    try {
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(
+        http.MultipartFile.fromBytes('file', imageBytes, filename: fileName),
+      );
+
+      final streamedResponse = await request.send().timeout(
+        Duration(seconds: AppConstants.apiTimeout * 2),
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final detectedBoxes =
+            (data['detectedBoxes'] as List<dynamic>?)
+                ?.map((box) => MaskingBox.fromJson(box as Map<String, dynamic>))
+                .toList() ??
+            [];
+
+        return detectedBoxes;
+      } else {
+        final error = json.decode(response.body);
+        throw ApiException(
+          error['error'] ?? 'Detection failed',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error during detection: $e', 0);
+    }
+  }
+
   /// リソースをクリーンアップ
   void dispose() {
     _client.close();
+  }
+}
+
+/// 画像アップロード結果
+class ImageUploadResult {
+  final String imageUrl;
+  final String? originalImageUrl;
+  final int detectedCount;
+  final bool masked;
+  final List<MaskingBox> detectedBoxes;
+
+  ImageUploadResult({
+    required this.imageUrl,
+    this.originalImageUrl,
+    required this.detectedCount,
+    required this.masked,
+    this.detectedBoxes = const [],
+  });
+}
+
+class MaskingBox {
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  MaskingBox({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  factory MaskingBox.fromJson(Map<String, dynamic> json) {
+    return MaskingBox(
+      x: (json['x'] as num).toDouble(),
+      y: (json['y'] as num).toDouble(),
+      width: (json['width'] as num).toDouble(),
+      height: (json['height'] as num).toDouble(),
+    );
   }
 }
 

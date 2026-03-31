@@ -10,12 +10,19 @@
     "db:init": "wrangler d1 execute car-library-db --local --file=./schema.sql",
     "db:init:remote": "wrangler d1 execute car-library-db --remote --file=./schema.sql"
   },
-  "keywords": ["cloudflare", "workers", "d1"],
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "d1"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240512.0",
-    "wrangler": "^3.57.1",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "wrangler": "^3.57.1"
+  },
+  "dependencies": {
+    "@cf-wasm/photon": "^0.3.4"
   }
 }

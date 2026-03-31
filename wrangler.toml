@@ -9,9 +9,13 @@ database_name = "car-library-db"
 database_id = "aee377bf-50f4-45c5-881e-ad86222f8d6d"
 
 # R2 Bucket (Phase 2で使用)
-# [[r2_buckets]]
-# binding = "CAR_IMAGES"
-# bucket_name = "car-images"
+[[r2_buckets]]
+binding = "CAR_IMAGES"
+bucket_name = "car-images"
+
+# AI (Phase 3で使用)
+[ai]
+binding = "AI"
 
 # KV Namespace (Phase 4で認証に使用)
 # [[kv_namespaces]]
