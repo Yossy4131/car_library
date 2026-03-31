@@ -6,7 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:car_library/features/post/providers/post_provider.dart';
 import 'package:car_library/features/post/models/post.dart';
 import 'package:car_library/features/post/screens/masking_preview_screen.dart';
+import 'package:car_library/features/auth/providers/auth_provider.dart';
 import 'package:car_library/shared/services/api_service.dart';
+import 'package:car_library/shared/providers/api_service_provider.dart';
 
 /// 新規投稿作成画面
 class CreatePostScreen extends HookConsumerWidget {
@@ -23,7 +25,6 @@ class CreatePostScreen extends HookConsumerWidget {
     final modelController = useTextEditingController();
     final variantController = useTextEditingController();
     final descriptionController = useTextEditingController();
-    final isOwnCar = useState(false);
     final enableMasking = useState(true); // デフォルトでマスキング有効
     final maskingRects = useState<List<MaskingRect>>([]);
 
@@ -141,6 +142,10 @@ class CreatePostScreen extends HookConsumerWidget {
 
       try {
         final apiService = ref.read(apiServiceProvider);
+        final authState = ref.read(authProvider);
+        if (!authState.isAuthenticated || authState.userId == null) {
+          throw Exception('サインインが必要です');
+        }
 
         // 1. 画像をアップロード
         // 手動マスキング領域がある場合はそれを優先（AI検出を無効化）
@@ -167,7 +172,7 @@ class CreatePostScreen extends HookConsumerWidget {
 
         // 2. 投稿を作成
         final request = CreatePostRequest(
-          userId: 'test-user-1', // TODO: Phase 4で認証実装後に実際のユーザーIDを使用
+          userId: authState.userId!,
           carMaker: makerController.text,
           carModel: modelController.text,
           carVariant: variantController.text.isEmpty
@@ -177,7 +182,6 @@ class CreatePostScreen extends HookConsumerWidget {
           description: descriptionController.text.isEmpty
               ? null
               : descriptionController.text,
-          isOwnCar: isOwnCar.value,
         );
 
         final postController = ref.read(postControllerProvider.notifier);
@@ -370,19 +374,6 @@ class CreatePostScreen extends HookConsumerWidget {
               ),
 
               const SizedBox(height: 16),
-
-              // 自車チェックボックス
-              CheckboxListTile(
-                title: const Text('自分の車'),
-                subtitle: const Text('あなたの愛車の場合はチェックしてください'),
-                value: isOwnCar.value,
-                onChanged: isUploading.value
-                    ? null
-                    : (value) {
-                        isOwnCar.value = value ?? false;
-                      },
-                contentPadding: EdgeInsets.zero,
-              ),
 
               // AIマスキングチェックボックス
               CheckboxListTile(

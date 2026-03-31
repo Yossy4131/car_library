@@ -49,6 +49,7 @@ app.*.map.json
 
 # Environment variables
 .env
+.dev.vars
 
 # Node.js
 node_modules/

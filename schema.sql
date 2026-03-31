@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS cars_master (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ユーザーテーブル（Phase 4: ID＋パスワード認証）
+CREATE TABLE IF NOT EXISTS users (
+  user_id TEXT PRIMARY KEY,
+  password_hash TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 投稿テーブル
 CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,7 +29,6 @@ CREATE TABLE IF NOT EXISTS posts (
   image_url TEXT NOT NULL,      -- R2の画像URL
   original_image_url TEXT,      -- 元画像のURL（マスキング前）
   description TEXT,             -- 投稿の説明・コメント
-  is_own_car BOOLEAN DEFAULT 0, -- 自分の車かどうか（0: 街で見かけた車, 1: 自分の車）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   deleted_at DATETIME           -- 論理削除用

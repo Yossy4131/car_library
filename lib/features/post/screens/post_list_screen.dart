@@ -3,6 +3,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:car_library/features/post/providers/post_provider.dart';
 import 'package:car_library/features/post/widgets/post_card.dart';
 import 'package:car_library/features/post/screens/create_post_screen.dart';
+import 'package:car_library/features/auth/providers/auth_provider.dart';
+import 'package:car_library/features/auth/screens/login_screen.dart';
+import 'package:car_library/features/mypage/screens/my_page_screen.dart';
 
 /// 投稿一覧画面
 class PostListScreen extends HookConsumerWidget {
@@ -12,12 +15,57 @@ class PostListScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 投稿一覧を取得
     final postsAsync = ref.watch(postsProvider(const PostsQueryParams()));
+    final authState = ref.watch(authProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('皆の車博覧会'),
         elevation: 2,
         actions: [
+          if (authState.isAuthenticated)
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == 'mypage') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MyPageScreen()),
+                  );
+                } else if (value == 'logout') {
+                  await ref.read(authProvider.notifier).signOut();
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem<String>(
+                  value: 'mypage',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person),
+                      SizedBox(width: 8),
+                      Text('マイページ'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout),
+                      SizedBox(width: 8),
+                      Text('ログアウト'),
+                    ],
+                  ),
+                ),
+              ],
+              icon: const Icon(Icons.account_circle),
+            )
+          else
+            TextButton(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+              },
+              child: const Text('ログイン'),
+            ),
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: () {
@@ -87,6 +135,7 @@ class PostListScreen extends HookConsumerWidget {
               itemCount: posts.length,
               itemBuilder: (context, index) {
                 final post = posts[index];
+
                 return PostCard(post: post);
               },
             ),
@@ -95,6 +144,12 @@ class PostListScreen extends HookConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
+          if (!authState.isAuthenticated) {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+            return;
+          }
           Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => const CreatePostScreen()),
           );

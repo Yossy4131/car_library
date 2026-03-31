@@ -2,22 +2,17 @@ name = "car-library-api"
 main = "src/index.ts"
 compatibility_date = "2024-03-01"
 
-# D1 Database
+# Secrets (set via `wrangler secret put`):
+#   JWT_SECRET
+
 [[d1_databases]]
 binding = "DB"
 database_name = "car-library-db"
 database_id = "aee377bf-50f4-45c5-881e-ad86222f8d6d"
 
-# R2 Bucket (Phase 2で使用)
 [[r2_buckets]]
 binding = "CAR_IMAGES"
 bucket_name = "car-images"
 
-# AI (Phase 3で使用)
 [ai]
 binding = "AI"
-
-# KV Namespace (Phase 4で認証に使用)
-# [[kv_namespaces]]
-# binding = "AUTH_KV"
-# id = ""

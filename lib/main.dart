@@ -6,20 +6,18 @@ import 'package:car_library/features/post/screens/post_list_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // .envファイルを読み込む
   await dotenv.load(fileName: '.env');
-  
+
   // 環境変数が正しく設定されているかチェック
   if (!AppConfig.isConfigured) {
-    throw Exception('API configuration is missing. Please check your .env file.');
+    throw Exception(
+      'API configuration is missing. Please check your .env file.',
+    );
   }
-  
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

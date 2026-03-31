@@ -8,7 +8,6 @@ class Post {
   final String imageUrl;
   final String? originalImageUrl;
   final String? description;
-  final bool isOwnCar;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -21,7 +20,6 @@ class Post {
     required this.imageUrl,
     this.originalImageUrl,
     this.description,
-    required this.isOwnCar,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -37,7 +35,6 @@ class Post {
       imageUrl: json['image_url'] as String,
       originalImageUrl: json['original_image_url'] as String?,
       description: json['description'] as String?,
-      isOwnCar: (json['is_own_car'] as int) == 1,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -54,7 +51,6 @@ class Post {
       'image_url': imageUrl,
       'original_image_url': originalImageUrl,
       'description': description,
-      'is_own_car': isOwnCar ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -79,7 +75,6 @@ class Post {
     String? imageUrl,
     String? originalImageUrl,
     String? description,
-    bool? isOwnCar,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -92,7 +87,6 @@ class Post {
       imageUrl: imageUrl ?? this.imageUrl,
       originalImageUrl: originalImageUrl ?? this.originalImageUrl,
       description: description ?? this.description,
-      isOwnCar: isOwnCar ?? this.isOwnCar,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -107,7 +101,6 @@ class CreatePostRequest {
   final String? carVariant;
   final String imageUrl;
   final String? description;
-  final bool isOwnCar;
 
   CreatePostRequest({
     required this.userId,
@@ -116,7 +109,6 @@ class CreatePostRequest {
     this.carVariant,
     required this.imageUrl,
     this.description,
-    this.isOwnCar = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -127,7 +119,6 @@ class CreatePostRequest {
       'car_variant': carVariant,
       'image_url': imageUrl,
       'description': description,
-      'is_own_car': isOwnCar,
     };
   }
 }

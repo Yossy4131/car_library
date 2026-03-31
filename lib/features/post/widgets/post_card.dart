@@ -5,10 +5,14 @@ import 'package:intl/intl.dart';
 /// 投稿カードウィジェット
 class PostCard extends StatelessWidget {
   final Post post;
+  final bool canDelete;
+  final VoidCallback? onDelete;
 
   const PostCard({
     super.key,
     required this.post,
+    this.canDelete = false,
+    this.onDelete,
   });
 
   @override
@@ -25,7 +29,9 @@ class PostCard extends StatelessWidget {
           AspectRatio(
             aspectRatio: 16 / 9,
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(4),
+              ),
               child: Image.network(
                 post.imageUrl,
                 fit: BoxFit.cover,
@@ -49,7 +55,7 @@ class PostCard extends StatelessWidget {
                       child: CircularProgressIndicator(
                         value: loadingProgress.expectedTotalBytes != null
                             ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
+                                  loadingProgress.expectedTotalBytes!
                             : null,
                       ),
                     ),
@@ -66,25 +72,31 @@ class PostCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 車両名
-                Text(
-                  post.displayName,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        post.displayName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                    ),
+                    if (canDelete && onDelete != null)
+                      IconButton(
+                        onPressed: onDelete,
+                        icon: const Icon(Icons.delete_outline),
+                        color: Colors.red,
+                        tooltip: '投稿を削除',
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
 
-                // 自車タグ
-                if (post.isOwnCar)
-                  Chip(
-                    label: const Text('自分の車'),
-                    avatar: const Icon(Icons.favorite, size: 16),
-                    backgroundColor: Colors.pink[50],
-                    labelStyle: TextStyle(color: Colors.pink[700]),
-                  ),
-
                 // 説明
-                if (post.description != null && post.description!.isNotEmpty) ...[
+                if (post.description != null &&
+                    post.description!.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
                     post.description!,
@@ -103,9 +115,9 @@ class PostCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       dateFormat.format(post.createdAt),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                     ),
                   ],
                 ),

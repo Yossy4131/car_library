@@ -9,6 +9,7 @@ import 'package:car_library/features/car_master/models/car_master.dart';
 class ApiService {
   final http.Client _client;
   late final String _baseUrl;
+  String? _authToken;
 
   ApiService({http.Client? client}) : _client = client ?? http.Client() {
     _baseUrl = AppConfig.apiBaseUrl;
@@ -20,10 +21,15 @@ class ApiService {
   /// 共通のHTTPヘッダーを取得
   Map<String, String> _getHeaders({String? authToken}) {
     final headers = {'Content-Type': 'application/json'};
-    if (authToken != null) {
-      headers['Authorization'] = 'Bearer $authToken';
+    final token = authToken ?? _authToken;
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
     }
     return headers;
+  }
+
+  void setAuthToken(String? token) {
+    _authToken = token;
   }
 
   /// エラーハンドリング付きのGETリクエスト
@@ -106,6 +112,38 @@ class ApiService {
     }
   }
 
+  /// エラーハンドリング付きのPATCHリクエスト
+  Future<Map<String, dynamic>> _patch(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final uri = Uri.parse('$_baseUrl$path');
+
+    try {
+      final request = http.Request('PATCH', uri);
+      request.headers.addAll(_getHeaders());
+      request.body = json.encode(body);
+
+      final streamedResponse = await _client
+          .send(request)
+          .timeout(Duration(seconds: AppConstants.apiTimeout));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else {
+        final error = json.decode(response.body);
+        throw ApiException(
+          error['error'] ?? 'Unknown error',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error: $e', 0);
+    }
+  }
+
   // ========== 投稿関連のAPI ==========
 
   /// 投稿一覧を取得
@@ -144,6 +182,26 @@ class ApiService {
     await _delete('${ApiEndpoints.posts}/$id');
   }
 
+  /// 自分の投稿一覧を取得
+  Future<List<Post>> getMyPosts() async {
+    final data = await _get(ApiEndpoints.myPosts);
+    final postsJson = data['posts'] as List;
+    return postsJson.map((json) => Post.fromJson(json)).toList();
+  }
+
+  /// 投稿の任意フィールドを更新（型式・説明）
+  Future<void> updatePost(
+    int id, {
+    String? carVariant,
+    String? description,
+  }) async {
+    final body = <String, dynamic>{
+      'car_variant': carVariant,
+      'description': description,
+    };
+    await _patch('${ApiEndpoints.posts}/$id', body);
+  }
+
   // ========== 車種マスター関連のAPI ==========
 
   /// 車種マスター一覧を取得
@@ -159,7 +217,7 @@ class ApiService {
 
   /// メーカー一覧を取得
   Future<List<String>> getMakers() async {
-    final data = await _get('${ApiEndpoints.carMaster}/makers');
+    final data = await _get(ApiEndpoints.carMakers);
     return (data['makers'] as List).cast<String>();
   }
 
@@ -173,11 +231,14 @@ class ApiService {
     List<MaskingBox>? maskingRects,
   }) async {
     final uri = Uri.parse(
-      '$_baseUrl/upload',
+      '$_baseUrl${ApiEndpoints.upload}',
     ).replace(queryParameters: enableMasking ? {'mask': 'true'} : null);
 
     try {
       final request = http.MultipartRequest('POST', uri);
+      if (_authToken != null && _authToken!.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
       request.files.add(
         http.MultipartFile.fromBytes('file', imageBytes, filename: fileName),
       );
@@ -248,10 +309,13 @@ class ApiService {
     List<int> imageBytes,
     String fileName,
   ) async {
-    final uri = Uri.parse('$_baseUrl/detect');
+    final uri = Uri.parse('$_baseUrl${ApiEndpoints.detect}');
 
     try {
       final request = http.MultipartRequest('POST', uri);
+      if (_authToken != null && _authToken!.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
       request.files.add(
         http.MultipartFile.fromBytes('file', imageBytes, filename: fileName),
       );
@@ -282,6 +346,34 @@ class ApiService {
       if (e is ApiException) rethrow;
       throw ApiException('Network error during detection: $e', 0);
     }
+  }
+
+  // ========== 認証関連のAPI ==========
+
+  Future<AuthResponse> login(String userId, String password) async {
+    final data = await _post(ApiEndpoints.authLogin, {
+      'userId': userId,
+      'password': password,
+    });
+    return AuthResponse(
+      token: data['token'] as String,
+      userId: data['userId'] as String,
+    );
+  }
+
+  Future<AuthResponse> register(String userId, String password) async {
+    final data = await _post(ApiEndpoints.authRegister, {
+      'userId': userId,
+      'password': password,
+    });
+    return AuthResponse(
+      token: data['token'] as String,
+      userId: data['userId'] as String,
+    );
+  }
+
+  Future<Map<String, dynamic>> getCurrentUser() async {
+    return await _get(ApiEndpoints.authMe);
   }
 
   /// リソースをクリーンアップ
@@ -339,4 +431,11 @@ class ApiException implements Exception {
 
   @override
   String toString() => 'ApiException: $message (Status: $statusCode)';
+}
+
+class AuthResponse {
+  final String token;
+  final String userId;
+
+  AuthResponse({required this.token, required this.userId});
 }
