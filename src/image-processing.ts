@@ -33,22 +33,61 @@ export async function maskImageRegions(
     // 生のピクセルデータを取得（RGBA形式）
     const rawPixels = img.get_raw_pixels();
     
-    // 各検出領域を黒く塗りつぶす
+    // 元のピクセルデータのコピーを作成（ブラー処理の読み取り用）
+    const originalPixels = new Uint8Array(rawPixels);
+    
+    // 各検出領域にセパラブルボックスブラーを適用
+    const blurRadius = 15;
+    
     for (const box of boxes) {
       const startX = Math.max(0, Math.floor(box.x));
       const startY = Math.max(0, Math.floor(box.y));
       const endX = Math.min(width, Math.ceil(box.x + box.width));
       const endY = Math.min(height, Math.ceil(box.y + box.height));
       
-      console.log(`Masking region: (${startX}, ${startY}) to (${endX}, ${endY})`);
+      console.log(`Blurring region: (${startX}, ${startY}) to (${endX}, ${endY})`);
+      
+      const regionWidth = endX - startX;
+      const regionHeight = endY - startY;
+      
+      // 横方向パス: originalPixels -> tempPixels
+      const tempPixels = new Uint8Array(regionWidth * regionHeight * 4);
       
       for (let y = startY; y < endY; y++) {
         for (let x = startX; x < endX; x++) {
-          const index = (y * width + x) * 4; // RGBA = 4 bytes per pixel
-          rawPixels[index] = 0;     // R
-          rawPixels[index + 1] = 0; // G
-          rawPixels[index + 2] = 0; // B
-          // rawPixels[index + 3] はアルファチャンネル（透明度）なのでそのまま
+          let r = 0, g = 0, b = 0, count = 0;
+          for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+            const nx = Math.min(Math.max(x + dx, 0), width - 1);
+            const idx = (y * width + nx) * 4;
+            r += originalPixels[idx];
+            g += originalPixels[idx + 1];
+            b += originalPixels[idx + 2];
+            count++;
+          }
+          const tempIdx = ((y - startY) * regionWidth + (x - startX)) * 4;
+          tempPixels[tempIdx]     = Math.round(r / count);
+          tempPixels[tempIdx + 1] = Math.round(g / count);
+          tempPixels[tempIdx + 2] = Math.round(b / count);
+          tempPixels[tempIdx + 3] = 255;
+        }
+      }
+      
+      // 縦方向パス: tempPixels -> rawPixels
+      for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+          let r = 0, g = 0, b = 0, count = 0;
+          for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+            const ny = Math.min(Math.max(y + dy, startY), endY - 1);
+            const tempIdx = ((ny - startY) * regionWidth + (x - startX)) * 4;
+            r += tempPixels[tempIdx];
+            g += tempPixels[tempIdx + 1];
+            b += tempPixels[tempIdx + 2];
+            count++;
+          }
+          const index = (y * width + x) * 4;
+          rawPixels[index]     = Math.round(r / count);
+          rawPixels[index + 1] = Math.round(g / count);
+          rawPixels[index + 2] = Math.round(b / count);
         }
       }
     }

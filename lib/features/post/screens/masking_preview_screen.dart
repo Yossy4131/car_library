@@ -105,8 +105,8 @@ class MaskingPreviewScreen extends HookWidget {
                 ];
               }
             },
-            icon: const Icon(Icons.add_box, color: Colors.white),
-            label: const Text('領域追加', style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.add_box, color: Colors.black),
+            label: const Text('領域追加', style: TextStyle(color: Colors.black)),
           ),
           const SizedBox(width: 8),
           TextButton.icon(
@@ -141,8 +141,8 @@ class MaskingPreviewScreen extends HookWidget {
               // Fallback: 変換せずにそのまま返す
               Navigator.pop(context, maskingRects.value);
             },
-            icon: const Icon(Icons.check, color: Colors.white),
-            label: const Text('確定', style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.check, color: Colors.black),
+            label: const Text('確定', style: TextStyle(color: Colors.black)),
           ),
           const SizedBox(width: 16),
         ],
@@ -329,50 +329,55 @@ class MaskingCanvas extends StatelessWidget {
                   ),
                 );
               },
-              child: Container(
-                width: rect.width,
-                height: rect.height,
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha(128),
-                  border: Border.all(
-                    color: isSelected ? Colors.blue : Colors.red,
-                    width: isSelected ? 3 : 2,
-                  ),
-                ),
-                child: isSelected
-                    ? Stack(
-                        children: [
-                          // リサイズハンドル（右下）
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: GestureDetector(
-                              onPanUpdate: (details) {
-                                onRectUpdated(
-                                  index,
-                                  rect.copyWith(
-                                    width: (rect.width + details.delta.dx)
-                                        .clamp(50, 1000),
-                                    height: (rect.height + details.delta.dy)
-                                        .clamp(50, 1000),
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    width: rect.width,
+                    height: rect.height,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(20),
+                      border: Border.all(
+                        color: isSelected ? Colors.blue : Colors.red,
+                        width: isSelected ? 3 : 2,
+                      ),
+                    ),
+                    child: isSelected
+                        ? Stack(
+                            children: [
+                              // リサイズハンドル（右下）
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: GestureDetector(
+                                  onPanUpdate: (details) {
+                                    onRectUpdated(
+                                      index,
+                                      rect.copyWith(
+                                        width: (rect.width + details.delta.dx)
+                                            .clamp(50, 1000),
+                                        height: (rect.height + details.delta.dy)
+                                            .clamp(50, 1000),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 20,
+                                    height: 20,
+                                    color: Colors.blue,
+                                    child: const Icon(
+                                      Icons.zoom_out_map,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                );
-                              },
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                color: Colors.blue,
-                                child: const Icon(
-                                  Icons.zoom_out_map,
-                                  size: 16,
-                                  color: Colors.white,
                                 ),
                               ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : null,
+                            ],
+                          )
+                        : null,
+                  ),
+                ),
               ),
             ),
           );
