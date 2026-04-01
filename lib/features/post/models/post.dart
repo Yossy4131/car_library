@@ -10,6 +10,8 @@ class Post {
   final String? description;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int likesCount;
+  final int commentsCount;
 
   Post({
     required this.id,
@@ -22,6 +24,8 @@ class Post {
     this.description,
     required this.createdAt,
     required this.updatedAt,
+    this.likesCount = 0,
+    this.commentsCount = 0,
   });
 
   /// JSONからPostオブジェクトを生成
@@ -37,6 +41,8 @@ class Post {
       description: json['description'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      likesCount: (json['likes_count'] as num?)?.toInt() ?? 0,
+      commentsCount: (json['comments_count'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -53,6 +59,8 @@ class Post {
       'description': description,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'likes_count': likesCount,
+      'comments_count': commentsCount,
     };
   }
 
@@ -81,6 +89,8 @@ class Post {
     String? description,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? likesCount,
+    int? commentsCount,
   }) {
     return Post(
       id: id ?? this.id,
@@ -93,6 +103,8 @@ class Post {
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      likesCount: likesCount ?? this.likesCount,
+      commentsCount: commentsCount ?? this.commentsCount,
     );
   }
 }

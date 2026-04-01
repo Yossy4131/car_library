@@ -164,6 +164,40 @@ class PostCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
+
+                  // いいね数・コメント数
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.favorite,
+                        size: 15,
+                        color: Color(0xFFE57373),
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${post.likesCount}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.chat_bubble_outline,
+                        size: 15,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${post.commentsCount}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

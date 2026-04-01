@@ -253,6 +253,41 @@ class _MyPostCard extends HookConsumerWidget {
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 6),
+
+                // いいね数・コメント数
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.favorite,
+                      size: 16,
+                      color: Color(0xFFE57373),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${post.likesCount}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 16,
+                      color: Colors.grey[500],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${post.commentsCount}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

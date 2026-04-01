@@ -62,7 +62,10 @@ export default {
         }
 
         const { results } = await env.DB.prepare(
-          'SELECT * FROM posts WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC'
+          `SELECT p.*,
+            (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
+            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
+           FROM posts p WHERE p.user_id = ? AND p.deleted_at IS NULL ORDER BY p.created_at DESC`
         ).bind(userId).all();
         return jsonResponse({ posts: results });
       }
@@ -73,19 +76,22 @@ export default {
         const maker = url.searchParams.get('maker');
         const model = url.searchParams.get('model');
 
-        let query = 'SELECT * FROM posts WHERE deleted_at IS NULL';
+        let query = `SELECT p.*,
+          (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
+          (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
+         FROM posts p WHERE p.deleted_at IS NULL`;
         const params: any[] = [];
 
         if (maker) {
-          query += ' AND car_maker = ?';
+          query += ' AND p.car_maker = ?';
           params.push(maker);
         }
         if (model) {
-          query += ' AND car_model = ?';
+          query += ' AND p.car_model = ?';
           params.push(model);
         }
 
-        query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+        query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
         params.push(limit, offset);
 
         const { results } = await env.DB.prepare(query).bind(...params).all();
@@ -470,6 +476,118 @@ export default {
           console.error('Image fetch error:', error);
           return errorResponse('Failed to fetch image', 500);
         }
+      }
+
+      // ========== いいね関連のエンドポイント ==========
+
+      // いいね数・自分がいいね済みか取得
+      if (path.match(/^\/posts\/(\d+)\/likes$/) && method === 'GET') {
+        const postId = path.split('/')[2];
+        const userId = await requireAuth(request, env);
+
+        const { results } = await env.DB.prepare(
+          'SELECT COUNT(*) as count FROM likes WHERE post_id = ?'
+        ).bind(postId).all();
+        const count = (results[0] as any).count as number;
+
+        let liked = false;
+        if (userId) {
+          const row = await env.DB.prepare(
+            'SELECT 1 FROM likes WHERE post_id = ? AND user_id = ?'
+          ).bind(postId, userId).first();
+          liked = !!row;
+        }
+
+        return jsonResponse({ count, liked });
+      }
+
+      // いいね追加
+      if (path.match(/^\/posts\/(\d+)\/likes$/) && method === 'POST') {
+        const userId = await requireAuth(request, env);
+        if (!userId) return errorResponse('Unauthorized', 401);
+
+        const postId = path.split('/')[2];
+        try {
+          await env.DB.prepare(
+            'INSERT INTO likes (post_id, user_id) VALUES (?, ?)'
+          ).bind(postId, userId).run();
+        } catch {
+          // UNIQUE違反 = すでにいいね済み → 冪等に200を返す
+        }
+
+        const { results } = await env.DB.prepare(
+          'SELECT COUNT(*) as count FROM likes WHERE post_id = ?'
+        ).bind(postId).all();
+        return jsonResponse({ count: (results[0] as any).count, liked: true });
+      }
+
+      // いいね取り消し
+      if (path.match(/^\/posts\/(\d+)\/likes$/) && method === 'DELETE') {
+        const userId = await requireAuth(request, env);
+        if (!userId) return errorResponse('Unauthorized', 401);
+
+        const postId = path.split('/')[2];
+        await env.DB.prepare(
+          'DELETE FROM likes WHERE post_id = ? AND user_id = ?'
+        ).bind(postId, userId).run();
+
+        const { results } = await env.DB.prepare(
+          'SELECT COUNT(*) as count FROM likes WHERE post_id = ?'
+        ).bind(postId).all();
+        return jsonResponse({ count: (results[0] as any).count, liked: false });
+      }
+
+      // ========== コメント関連のエンドポイント ==========
+
+      // コメント一覧取得
+      if (path.match(/^\/posts\/(\d+)\/comments$/) && method === 'GET') {
+        const postId = path.split('/')[2];
+        const { results } = await env.DB.prepare(
+          'SELECT * FROM comments WHERE post_id = ? ORDER BY created_at ASC'
+        ).bind(postId).all();
+        return jsonResponse({ comments: results });
+      }
+
+      // コメント投稿
+      if (path.match(/^\/posts\/(\d+)\/comments$/) && method === 'POST') {
+        const userId = await requireAuth(request, env);
+        if (!userId) return errorResponse('Unauthorized', 401);
+
+        const postId = path.split('/')[2];
+        const body = await request.json() as any;
+        const text = String(body?.body || '').trim();
+
+        if (!text) return errorResponse('body is required', 400);
+        if (text.length > 500) return errorResponse('コメントは500文字以内にしてください', 400);
+
+        const result = await env.DB.prepare(
+          'INSERT INTO comments (post_id, user_id, body) VALUES (?, ?, ?)'
+        ).bind(postId, userId, text).run();
+
+        return jsonResponse({
+          id: result.meta.last_row_id,
+          post_id: parseInt(postId),
+          user_id: userId,
+          body: text,
+          created_at: new Date().toISOString(),
+        }, 201);
+      }
+
+      // コメント削除（投稿者本人のみ）
+      if (path.match(/^\/posts\/\d+\/comments\/\d+$/) && method === 'DELETE') {
+        const userId = await requireAuth(request, env);
+        if (!userId) return errorResponse('Unauthorized', 401);
+
+        const commentId = path.split('/')[4];
+        const row = await env.DB.prepare(
+          'SELECT user_id FROM comments WHERE id = ?'
+        ).bind(commentId).first() as { user_id: string } | null;
+
+        if (!row) return errorResponse('Comment not found', 404);
+        if (row.user_id !== userId) return errorResponse('Forbidden', 403);
+
+        await env.DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run();
+        return jsonResponse({ message: 'Deleted' });
       }
 
       return errorResponse('Endpoint not found', 404);

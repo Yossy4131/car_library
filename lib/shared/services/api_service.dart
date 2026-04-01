@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:car_library/core/config/app_config.dart';
 import 'package:car_library/core/constants/api_constants.dart';
 import 'package:car_library/features/post/models/post.dart';
+import 'package:car_library/features/post/models/like_comment.dart';
 
 /// Cloudflare Workers APIとの通信を担当するサービスクラス
 class ApiService {
@@ -358,6 +359,46 @@ class ApiService {
 
   Future<Map<String, dynamic>> getCurrentUser() async {
     return await _get(ApiEndpoints.authMe);
+  }
+
+  // ========== いいね・コメント関連のAPI ==========
+
+  /// いいね状態を取得
+  Future<LikeStatus> getLikeStatus(int postId) async {
+    final data = await _get('/posts/$postId/likes');
+    return LikeStatus.fromJson(data);
+  }
+
+  /// いいねを追加
+  Future<LikeStatus> addLike(int postId) async {
+    final data = await _post('/posts/$postId/likes', {});
+    return LikeStatus.fromJson(data);
+  }
+
+  /// いいねを取り消し
+  Future<LikeStatus> removeLike(int postId) async {
+    final data = await _delete('/posts/$postId/likes');
+    return LikeStatus.fromJson(data);
+  }
+
+  /// コメント一覧を取得
+  Future<List<Comment>> getComments(int postId) async {
+    final data = await _get('/posts/$postId/comments');
+    final list = data['comments'] as List<dynamic>;
+    return list
+        .map((e) => Comment.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// コメントを投稿
+  Future<Comment> addComment(int postId, String body) async {
+    final data = await _post('/posts/$postId/comments', {'body': body});
+    return Comment.fromJson(data);
+  }
+
+  /// コメントを削除
+  Future<void> deleteComment(int postId, int commentId) async {
+    await _delete('/posts/$postId/comments/$commentId');
   }
 
   /// リソースをクリーンアップ
