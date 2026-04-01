@@ -41,7 +41,7 @@ class LoginScreen extends HookConsumerWidget {
               controller: userIdController,
               decoration: const InputDecoration(
                 labelText: 'ユーザーID',
-                hintText: 'yossy_123',
+                hintText: 'your_user_id',
                 border: OutlineInputBorder(),
               ),
               textInputAction: TextInputAction.next,
@@ -80,7 +80,9 @@ class LoginScreen extends HookConsumerWidget {
                   ? null
                   : () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterScreen(),
+                        ),
                       );
                     },
               child: const Text('アカウントをお持ちでない方は新規登録'),

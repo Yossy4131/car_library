@@ -67,7 +67,7 @@ class RegisterScreen extends HookConsumerWidget {
               controller: userIdController,
               decoration: const InputDecoration(
                 labelText: 'ユーザーID',
-                hintText: 'yossy_123',
+                hintText: 'your_user_id',
                 helperText: '3〜30文字、英数字・ハイフン・アンダースコア',
                 border: OutlineInputBorder(),
               ),

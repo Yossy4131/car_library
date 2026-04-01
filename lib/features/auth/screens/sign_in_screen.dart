@@ -41,7 +41,7 @@ class LoginScreen extends HookConsumerWidget {
               controller: userIdController,
               decoration: const InputDecoration(
                 labelText: 'ユーザーID',
-                hintText: 'yossy_123',
+                hintText: 'your_user_id',
                 border: OutlineInputBorder(),
               ),
               textInputAction: TextInputAction.next,
