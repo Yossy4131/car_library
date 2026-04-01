@@ -70,13 +70,46 @@ class MyPageScreen extends HookConsumerWidget {
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(myPostsProvider),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: posts.length,
-              itemBuilder: (context, index) => _MyPostCard(post: posts[index]),
-            ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final int crossAxisCount = width < 600
+                  ? 1
+                  : width < 1200
+                  ? 2
+                  : 3;
+              const double spacing = 8.0;
+
+              if (crossAxisCount == 1) {
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(myPostsProvider),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(spacing),
+                    itemCount: posts.length,
+                    itemBuilder: (_, index) => _MyPostCard(post: posts[index]),
+                  ),
+                );
+              }
+
+              final itemWidth =
+                  (width - spacing * (crossAxisCount + 1)) / crossAxisCount;
+              final mainAxisExtent = itemWidth * 9 / 16 + 160;
+
+              return RefreshIndicator(
+                onRefresh: () async => ref.invalidate(myPostsProvider),
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(spacing),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: spacing,
+                    mainAxisSpacing: spacing,
+                    mainAxisExtent: mainAxisExtent,
+                  ),
+                  itemCount: posts.length,
+                  itemBuilder: (_, index) => _MyPostCard(post: posts[index]),
+                ),
+              );
+            },
           );
         },
       ),

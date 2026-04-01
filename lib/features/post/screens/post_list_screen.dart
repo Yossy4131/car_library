@@ -19,7 +19,7 @@ class PostListScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('皆の車博覧会'),
+        title: const Text('CarLovers'),
         elevation: 2,
         actions: [
           if (authState.isAuthenticated)
@@ -126,19 +126,50 @@ class PostListScreen extends HookConsumerWidget {
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(postsProvider);
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: posts.length,
-              itemBuilder: (context, index) {
-                final post = posts[index];
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              // ブレークポイント: ~600px = 1列, ~1200px = 2列, 1200px~ = 3列
+              final int crossAxisCount = width < 600
+                  ? 1
+                  : width < 1200
+                  ? 2
+                  : 3;
+              const double spacing = 8.0;
 
-                return PostCard(post: post);
-              },
-            ),
+              // モバイル: 現状維持（ListView）
+              if (crossAxisCount == 1) {
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(postsProvider),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(spacing),
+                    itemCount: posts.length,
+                    itemBuilder: (_, index) => PostCard(post: posts[index]),
+                  ),
+                );
+              }
+
+              // タブレット/PC: グリッドレイアウト
+              // カード高さ = 画像(16:9) + テキストエリア
+              final itemWidth =
+                  (width - spacing * (crossAxisCount + 1)) / crossAxisCount;
+              final mainAxisExtent = itemWidth * 9 / 16 + 160;
+
+              return RefreshIndicator(
+                onRefresh: () async => ref.invalidate(postsProvider),
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(spacing),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: spacing,
+                    mainAxisSpacing: spacing,
+                    mainAxisExtent: mainAxisExtent,
+                  ),
+                  itemCount: posts.length,
+                  itemBuilder: (_, index) => PostCard(post: posts[index]),
+                ),
+              );
+            },
           );
         },
       ),
