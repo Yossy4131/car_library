@@ -17,16 +17,24 @@ class PostListScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filterMaker = useState<String?>(null);
     final filterModel = useState<String?>(null);
+    final filterTag = useState<String?>(null);
 
     // 投稿一覧を取得
     final postsAsync = ref.watch(
       postsProvider(
-        PostsQueryParams(maker: filterMaker.value, model: filterModel.value),
+        PostsQueryParams(
+          maker: filterMaker.value,
+          model: filterModel.value,
+          tag: filterTag.value,
+        ),
       ),
     );
     final authState = ref.watch(authProvider);
 
-    final hasFilter = filterMaker.value != null || filterModel.value != null;
+    final hasFilter =
+        filterMaker.value != null ||
+        filterModel.value != null ||
+        filterTag.value != null;
 
     Future<void> openFilterSheet() async {
       await showModalBottomSheet(
@@ -38,9 +46,11 @@ class PostListScreen extends HookConsumerWidget {
         builder: (_) => _FilterSheet(
           initialMaker: filterMaker.value,
           initialModel: filterModel.value,
-          onApply: (maker, model) {
+          initialTag: filterTag.value,
+          onApply: (maker, model, tag) {
             filterMaker.value = maker;
             filterModel.value = model;
+            filterTag.value = tag;
           },
         ),
       );
@@ -156,11 +166,22 @@ class PostListScreen extends HookConsumerWidget {
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       visualDensity: VisualDensity.compact,
                     ),
+                  if (filterTag.value != null) ...[
+                    const SizedBox(width: 6),
+                    Chip(
+                      label: Text('#${filterTag.value!}'),
+                      avatar: const Icon(Icons.tag, size: 14),
+                      onDeleted: () => filterTag.value = null,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                   const Spacer(),
                   TextButton(
                     onPressed: () {
                       filterMaker.value = null;
                       filterModel.value = null;
+                      filterTag.value = null;
                     },
                     child: const Text('クリア'),
                   ),
@@ -253,7 +274,7 @@ class PostListScreen extends HookConsumerWidget {
                     final itemWidth =
                         (width - spacing * (crossAxisCount + 1)) /
                         crossAxisCount;
-                    final mainAxisExtent = itemWidth * 9 / 16 + 160;
+                    final mainAxisExtent = itemWidth * 9 / 16 + 200;
 
                     return RefreshIndicator(
                       onRefresh: () async => ref.invalidate(postsProvider),
@@ -299,18 +320,21 @@ class PostListScreen extends HookConsumerWidget {
 class _FilterSheet extends HookConsumerWidget {
   final String? initialMaker;
   final String? initialModel;
-  final void Function(String? maker, String? model) onApply;
+  final String? initialTag;
+  final void Function(String? maker, String? model, String? tag) onApply;
 
   const _FilterSheet({
     required this.initialMaker,
     required this.initialModel,
     required this.onApply,
+    this.initialTag,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedMaker = useState<String?>(initialMaker);
     final selectedModel = useState<String?>(initialModel);
+    final tagController = useTextEditingController(text: initialTag ?? '');
     final makerController = useTextEditingController(text: initialMaker ?? '');
     final modelController = useTextEditingController(text: initialModel ?? '');
 
@@ -420,10 +444,31 @@ class _FilterSheet extends HookConsumerWidget {
 
             const SizedBox(height: 24),
 
+            // タグ入力
+            TextField(
+              controller: tagController,
+              decoration: const InputDecoration(
+                labelText: 'ハッシュタグ',
+                hintText: 'スポーツカー、改造車...',
+                prefixIcon: Icon(Icons.tag),
+                helperText: '# なしで入力してください',
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
             // 適用ボタン
             ElevatedButton(
               onPressed: () {
-                onApply(selectedMaker.value, selectedModel.value);
+                final tagText = tagController.text.trim().replaceAll(
+                  RegExp(r'^#+'),
+                  '',
+                );
+                onApply(
+                  selectedMaker.value,
+                  selectedModel.value,
+                  tagText.isEmpty ? null : tagText,
+                );
                 Navigator.pop(context);
               },
               child: const Text('この条件で絞り込む'),
@@ -431,7 +476,7 @@ class _FilterSheet extends HookConsumerWidget {
             const SizedBox(height: 8),
             TextButton(
               onPressed: () {
-                onApply(null, null);
+                onApply(null, null, null);
                 Navigator.pop(context);
               },
               child: const Text('フィルターをリセット'),

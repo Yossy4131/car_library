@@ -198,6 +198,28 @@ class PostCard extends StatelessWidget {
                       ),
                     ],
                   ),
+
+                  // タグ
+                  if (post.tags.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 2,
+                      children: post.tags
+                          .take(5)
+                          .map(
+                            (tag) => Text(
+                              '#$tag',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: const Color(0xFF162F4E).withOpacity(0.7),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
                 ],
               ),
             ),

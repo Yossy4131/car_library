@@ -228,6 +228,33 @@ class PostDetailScreen extends HookConsumerWidget {
                             ),
                           ),
 
+                        // タグ
+                        if (post.tags.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: post.tags
+                                  .map(
+                                    (tag) => GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text(
+                                        '#$tag',
+                                        style: const TextStyle(
+                                          color: Color(0xFF90CAF9),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Row(

@@ -31,6 +31,8 @@ class CreatePostScreen extends HookConsumerWidget {
 
     final variantController = useTextEditingController();
     final descriptionController = useTextEditingController();
+    final tagInputController = useTextEditingController();
+    final tags = useState<List<String>>([]);
     final maskingRects = useState<List<MaskingRect>>([]);
     final isDetecting = useState(false);
 
@@ -201,6 +203,7 @@ class CreatePostScreen extends HookConsumerWidget {
           description: descriptionController.text.isEmpty
               ? null
               : descriptionController.text,
+          tags: tags.value,
         );
 
         final postController = ref.read(postControllerProvider.notifier);
@@ -404,6 +407,30 @@ class CreatePostScreen extends HookConsumerWidget {
                     ),
                     maxLines: 3,
                     enabled: !isUploading.value,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // タグ入力
+                  _TagInputField(
+                    controller: tagInputController,
+                    tags: tags.value,
+                    enabled: !isUploading.value,
+                    onAddTag: (tag) {
+                      final normalized = tag.toLowerCase().trim().replaceAll(
+                        RegExp(r'^#+'),
+                        '',
+                      );
+                      if (normalized.isNotEmpty &&
+                          !tags.value.contains(normalized) &&
+                          tags.value.length < 10) {
+                        tags.value = [...tags.value, normalized];
+                      }
+                      tagInputController.clear();
+                    },
+                    onRemoveTag: (tag) {
+                      tags.value = tags.value.where((t) => t != tag).toList();
+                    },
                   ),
 
                   const SizedBox(height: 16),
@@ -673,4 +700,79 @@ Widget _buildModelField({
       },
     ),
   );
+}
+
+// ────────────────────────────────────────────────────
+// タグ入力フィールド
+// ────────────────────────────────────────────────────
+
+class _TagInputField extends StatelessWidget {
+  final TextEditingController controller;
+  final List<String> tags;
+  final bool enabled;
+  final void Function(String tag) onAddTag;
+  final void Function(String tag) onRemoveTag;
+
+  const _TagInputField({
+    required this.controller,
+    required this.tags,
+    required this.enabled,
+    required this.onAddTag,
+    required this.onRemoveTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          enabled: enabled,
+          decoration: InputDecoration(
+            labelText: 'ハッシュタグ',
+            hintText: '例: スポーツカー（最大10個）',
+            border: const OutlineInputBorder(),
+            helperText: '入力してEnterで追加。# は自動で付きます。',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: enabled
+                  ? () {
+                      final v = controller.text.trim();
+                      if (v.isNotEmpty) onAddTag(v);
+                    }
+                  : null,
+            ),
+          ),
+          onSubmitted: (v) {
+            if (v.trim().isNotEmpty) onAddTag(v.trim());
+          },
+          onChanged: (v) {
+            if (v.endsWith(' ') || v.endsWith('　')) {
+              final trimmed = v.trim();
+              if (trimmed.isNotEmpty) onAddTag(trimmed);
+            }
+          },
+        ),
+        if (tags.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: tags
+                .map(
+                  (tag) => Chip(
+                    label: Text('#$tag'),
+                    deleteIcon: const Icon(Icons.close, size: 14),
+                    onDeleted: () => onRemoveTag(tag),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
 }

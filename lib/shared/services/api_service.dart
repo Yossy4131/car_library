@@ -152,6 +152,7 @@ class ApiService {
     int offset = 0,
     String? maker,
     String? model,
+    String? tag,
   }) async {
     final queryParams = <String, String>{
       'limit': limit.toString(),
@@ -159,6 +160,7 @@ class ApiService {
     };
     if (maker != null) queryParams['maker'] = maker;
     if (model != null) queryParams['model'] = model;
+    if (tag != null) queryParams['tag'] = tag;
 
     final data = await _get(ApiEndpoints.posts, queryParams: queryParams);
     final postsJson = data['posts'] as List;
@@ -196,6 +198,7 @@ class ApiService {
     String? carModel,
     String? carVariant,
     String? description,
+    List<String>? tags,
   }) async {
     final body = <String, dynamic>{
       'car_variant': carVariant,
@@ -203,6 +206,7 @@ class ApiService {
     };
     if (carMaker != null) body['car_maker'] = carMaker;
     if (carModel != null) body['car_model'] = carModel;
+    if (tags != null) body['tags'] = tags;
     await _patch('${ApiEndpoints.posts}/$id', body);
   }
 

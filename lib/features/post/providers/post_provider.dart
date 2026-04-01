@@ -15,6 +15,7 @@ final postsProvider = FutureProvider.family<List<Post>, PostsQueryParams>((
     offset: params.offset,
     maker: params.maker,
     model: params.model,
+    tag: params.tag,
   );
 });
 
@@ -33,12 +34,14 @@ class PostsQueryParams {
   final int offset;
   final String? maker;
   final String? model;
+  final String? tag;
 
   const PostsQueryParams({
     this.limit = 20,
     this.offset = 0,
     this.maker,
     this.model,
+    this.tag,
   });
 
   @override
@@ -48,12 +51,13 @@ class PostsQueryParams {
         other.limit == limit &&
         other.offset == offset &&
         other.maker == maker &&
-        other.model == model;
+        other.model == model &&
+        other.tag == tag;
   }
 
   @override
   int get hashCode {
-    return Object.hash(limit, offset, maker, model);
+    return Object.hash(limit, offset, maker, model, tag);
   }
 }
 
@@ -96,6 +100,7 @@ class PostController extends StateNotifier<AsyncValue<void>> {
     String? carModel,
     String? carVariant,
     String? description,
+    List<String>? tags,
   }) async {
     state = const AsyncValue.loading();
     try {
@@ -105,6 +110,7 @@ class PostController extends StateNotifier<AsyncValue<void>> {
         carModel: carModel,
         carVariant: carVariant,
         description: description,
+        tags: tags,
       );
       state = const AsyncValue.data(null);
       return true;

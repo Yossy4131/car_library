@@ -94,7 +94,7 @@ class MyPageScreen extends HookConsumerWidget {
 
               final itemWidth =
                   (width - spacing * (crossAxisCount + 1)) / crossAxisCount;
-              final mainAxisExtent = itemWidth * 9 / 16 + 160;
+              final mainAxisExtent = itemWidth * 9 / 16 + 200;
 
               return RefreshIndicator(
                 onRefresh: () async => ref.invalidate(myPostsProvider),
@@ -288,6 +288,27 @@ class _MyPostCard extends HookConsumerWidget {
                     ),
                   ],
                 ),
+
+                // タグ
+                if (post.tags.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 2,
+                    children: post.tags
+                        .map(
+                          (tag) => Text(
+                            '#$tag',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFF162F4E).withOpacity(0.7),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ],
             ),
           ),
@@ -317,6 +338,7 @@ class _MyPostCard extends HookConsumerWidget {
           carModel: result['carModel'] as String?,
           carVariant: result['carVariant'] as String?,
           description: result['description'] as String?,
+          tags: result['tags'] as List<String>?,
         );
 
     if (!context.mounted) return;
@@ -401,6 +423,8 @@ class _EditPostDialog extends HookConsumerWidget {
     final descriptionController = useTextEditingController(
       text: post.description ?? '',
     );
+    final tagInputController = useTextEditingController();
+    final tags = useState<List<String>>(List<String>.from(post.tags));
 
     final nhtsaMakersAsync = ref.watch(nhtsaMakersProvider);
     final nhtsaModelsAsync =
@@ -453,6 +477,27 @@ class _EditPostDialog extends HookConsumerWidget {
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 16),
+              // タグ入力
+              _TagEditField(
+                controller: tagInputController,
+                tags: tags.value,
+                onAddTag: (tag) {
+                  final normalized = tag.toLowerCase().trim().replaceAll(
+                    RegExp(r'^#+'),
+                    '',
+                  );
+                  if (normalized.isNotEmpty &&
+                      !tags.value.contains(normalized) &&
+                      tags.value.length < 10) {
+                    tags.value = [...tags.value, normalized];
+                  }
+                  tagInputController.clear();
+                },
+                onRemoveTag: (tag) {
+                  tags.value = tags.value.where((t) => t != tag).toList();
+                },
+              ),
             ],
           ),
         ),
@@ -475,6 +520,7 @@ class _EditPostDialog extends HookConsumerWidget {
               'description': descriptionController.text.trim().isEmpty
                   ? null
                   : descriptionController.text.trim(),
+              'tags': tags.value,
             });
           },
           child: const Text('保存'),
@@ -693,4 +739,74 @@ Widget _buildModelField({
       },
     ),
   );
+}
+
+// ────────────────────────────────────────────────────
+// マイページ用タグ編集フィールド
+// ────────────────────────────────────────────────────
+
+class _TagEditField extends StatelessWidget {
+  final TextEditingController controller;
+  final List<String> tags;
+  final void Function(String tag) onAddTag;
+  final void Function(String tag) onRemoveTag;
+
+  const _TagEditField({
+    required this.controller,
+    required this.tags,
+    required this.onAddTag,
+    required this.onRemoveTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: 'ハッシュタグ',
+            hintText: '例: スポーツカー（最大10個）',
+            border: const OutlineInputBorder(),
+            helperText: '入力してEnterで追加。# は自動で付きます。',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                final v = controller.text.trim();
+                if (v.isNotEmpty) onAddTag(v);
+              },
+            ),
+          ),
+          onSubmitted: (v) {
+            if (v.trim().isNotEmpty) onAddTag(v.trim());
+          },
+          onChanged: (v) {
+            if (v.endsWith(' ') || v.endsWith('　')) {
+              final trimmed = v.trim();
+              if (trimmed.isNotEmpty) onAddTag(trimmed);
+            }
+          },
+        ),
+        if (tags.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: tags
+                .map(
+                  (tag) => Chip(
+                    label: Text('#$tag'),
+                    deleteIcon: const Icon(Icons.close, size: 14),
+                    onDeleted: () => onRemoveTag(tag),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
 }

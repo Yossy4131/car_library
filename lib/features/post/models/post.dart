@@ -12,6 +12,7 @@ class Post {
   final DateTime updatedAt;
   final int likesCount;
   final int commentsCount;
+  final List<String> tags;
 
   Post({
     required this.id,
@@ -26,6 +27,7 @@ class Post {
     required this.updatedAt,
     this.likesCount = 0,
     this.commentsCount = 0,
+    this.tags = const [],
   });
 
   /// JSONからPostオブジェクトを生成
@@ -43,6 +45,12 @@ class Post {
       updatedAt: DateTime.parse(json['updated_at'] as String),
       likesCount: (json['likes_count'] as num?)?.toInt() ?? 0,
       commentsCount: (json['comments_count'] as num?)?.toInt() ?? 0,
+      tags:
+          (json['tags_csv'] as String?)
+              ?.split(',')
+              .where((t) => t.isNotEmpty)
+              .toList() ??
+          [],
     );
   }
 
@@ -61,6 +69,7 @@ class Post {
       'updated_at': updatedAt.toIso8601String(),
       'likes_count': likesCount,
       'comments_count': commentsCount,
+      'tags_csv': tags.join(','),
     };
   }
 
@@ -91,6 +100,7 @@ class Post {
     DateTime? updatedAt,
     int? likesCount,
     int? commentsCount,
+    List<String>? tags,
   }) {
     return Post(
       id: id ?? this.id,
@@ -105,6 +115,7 @@ class Post {
       updatedAt: updatedAt ?? this.updatedAt,
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
+      tags: tags ?? this.tags,
     );
   }
 }
@@ -117,6 +128,7 @@ class CreatePostRequest {
   final String? carVariant;
   final String imageUrl;
   final String? description;
+  final List<String> tags;
 
   CreatePostRequest({
     required this.userId,
@@ -125,6 +137,7 @@ class CreatePostRequest {
     this.carVariant,
     required this.imageUrl,
     this.description,
+    this.tags = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -135,6 +148,7 @@ class CreatePostRequest {
       'car_variant': carVariant,
       'image_url': imageUrl,
       'description': description,
+      'tags': tags,
     };
   }
 }

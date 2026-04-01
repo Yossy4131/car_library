@@ -64,7 +64,8 @@ export default {
         const { results } = await env.DB.prepare(
           `SELECT p.*,
             (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
-            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
+            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+            (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv
            FROM posts p WHERE p.user_id = ? AND p.deleted_at IS NULL ORDER BY p.created_at DESC`
         ).bind(userId).all();
         return jsonResponse({ posts: results });
@@ -76,9 +77,12 @@ export default {
         const maker = url.searchParams.get('maker');
         const model = url.searchParams.get('model');
 
+        const tag = url.searchParams.get('tag');
+
         let query = `SELECT p.*,
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
-          (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
+          (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+          (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv
          FROM posts p WHERE p.deleted_at IS NULL`;
         const params: any[] = [];
 
@@ -89,6 +93,10 @@ export default {
         if (model) {
           query += ' AND p.car_model = ?';
           params.push(model);
+        }
+        if (tag) {
+          query += ' AND EXISTS (SELECT 1 FROM post_tags WHERE post_id = p.id AND tag = ?)';
+          params.push(tag);
         }
 
         query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
@@ -101,7 +109,11 @@ export default {
       if (path.match(/^\/posts\/\d+$/) && method === 'GET') {
         const id = path.split('/')[2];
         const { results } = await env.DB.prepare(
-          'SELECT * FROM posts WHERE id = ? AND deleted_at IS NULL'
+          `SELECT p.*,
+            (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
+            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+            (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv
+           FROM posts p WHERE p.id = ? AND p.deleted_at IS NULL`
         ).bind(id).all();
 
         if (results.length === 0) {
@@ -118,7 +130,7 @@ export default {
         }
 
         const body = await request.json() as any;
-        const { car_maker, car_model, car_variant, image_url, description } = body;
+        const { car_maker, car_model, car_variant, image_url, description, tags } = body;
 
         if (!car_maker || !car_model || !image_url) {
           return errorResponse('Missing required fields: car_maker, car_model, image_url');
@@ -136,9 +148,24 @@ export default {
           description || null
         ).run();
 
+        const postId = result.meta.last_row_id;
+
+        // タグを保存
+        if (Array.isArray(tags) && tags.length > 0) {
+          const normalizedTags: string[] = tags
+            .map((t: any) => String(t).toLowerCase().trim().replace(/^#/, ''))
+            .filter((t: string) => t.length > 0 && t.length <= 50)
+            .slice(0, 10);
+          for (const tag of normalizedTags) {
+            await env.DB.prepare(
+              'INSERT OR IGNORE INTO post_tags (post_id, tag) VALUES (?, ?)'
+            ).bind(postId, tag).run();
+          }
+        }
+
         return jsonResponse({
           message: 'Post created successfully',
-          id: result.meta.last_row_id,
+          id: postId,
         }, 201);
       }
 
@@ -165,8 +192,9 @@ export default {
         const carVariant = body?.car_variant !== undefined ? body.car_variant : undefined;
         const carMaker = body?.car_maker !== undefined ? body.car_maker : undefined;
         const carModel = body?.car_model !== undefined ? body.car_model : undefined;
+        const tagsRaw = body?.tags !== undefined ? body.tags : undefined; // undefined = 触らない, [] = 全削除
 
-        if (description === undefined && carVariant === undefined && carMaker === undefined && carModel === undefined) {
+        if (description === undefined && carVariant === undefined && carMaker === undefined && carModel === undefined && tagsRaw === undefined) {
           return errorResponse('更新するフィールドがありません', 400);
         }
 
@@ -191,9 +219,25 @@ export default {
           values.push(carVariant || null);
         }
 
-        await env.DB.prepare(
-          `UPDATE posts SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-        ).bind(...values, id).run();
+        if (fields.length > 0) {
+          await env.DB.prepare(
+            `UPDATE posts SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+          ).bind(...values, id).run();
+        }
+
+        // タグ更新（undefined でなければ差し替え）
+        if (Array.isArray(tagsRaw)) {
+          await env.DB.prepare('DELETE FROM post_tags WHERE post_id = ?').bind(id).run();
+          const normalizedTags: string[] = (tagsRaw as any[])
+            .map((t: any) => String(t).toLowerCase().trim().replace(/^#/, ''))
+            .filter((t: string) => t.length > 0 && t.length <= 50)
+            .slice(0, 10);
+          for (const tag of normalizedTags) {
+            await env.DB.prepare(
+              'INSERT OR IGNORE INTO post_tags (post_id, tag) VALUES (?, ?)'
+            ).bind(id, tag).run();
+          }
+        }
 
         return jsonResponse({ message: 'Post updated successfully' });
       }
