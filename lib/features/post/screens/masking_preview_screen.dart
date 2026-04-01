@@ -105,8 +105,8 @@ class MaskingPreviewScreen extends HookWidget {
                 ];
               }
             },
-            icon: const Icon(Icons.add_box, color: Colors.black),
-            label: const Text('領域追加', style: TextStyle(color: Colors.black)),
+            icon: const Icon(Icons.add_box, color: Colors.white),
+            label: const Text('領域追加', style: TextStyle(color: Colors.white)),
           ),
           const SizedBox(width: 8),
           TextButton.icon(
@@ -141,8 +141,8 @@ class MaskingPreviewScreen extends HookWidget {
               // Fallback: 変換せずにそのまま返す
               Navigator.pop(context, maskingRects.value);
             },
-            icon: const Icon(Icons.check, color: Colors.black),
-            label: const Text('確定', style: TextStyle(color: Colors.black)),
+            icon: const Icon(Icons.check, color: Colors.white),
+            label: const Text('確定', style: TextStyle(color: Colors.white)),
           ),
           const SizedBox(width: 16),
         ],

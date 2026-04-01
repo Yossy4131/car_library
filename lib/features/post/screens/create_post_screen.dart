@@ -252,7 +252,11 @@ class CreatePostScreen extends HookConsumerWidget {
               onPressed: submitPost,
               child: const Text(
                 '投稿',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
         ],

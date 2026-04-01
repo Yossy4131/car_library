@@ -19,8 +19,21 @@ class PostListScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CarLovers'),
-        elevation: 2,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.directions_car, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              'Car Lovers',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ),
         actions: [
           if (authState.isAuthenticated)
             PopupMenuButton<String>(
@@ -38,7 +51,7 @@ class PostListScreen extends HookConsumerWidget {
                   value: 'mypage',
                   child: Row(
                     children: [
-                      Icon(Icons.person),
+                      Icon(Icons.person, color: Color(0xFF0D1B4B)),
                       SizedBox(width: 8),
                       Text('マイページ'),
                     ],
@@ -48,7 +61,7 @@ class PostListScreen extends HookConsumerWidget {
                   value: 'logout',
                   child: Row(
                     children: [
-                      Icon(Icons.logout),
+                      Icon(Icons.logout, color: Color(0xFF0D1B4B)),
                       SizedBox(width: 8),
                       Text('ログアウト'),
                     ],

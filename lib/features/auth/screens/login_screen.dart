@@ -31,63 +31,108 @@ class LoginScreen extends HookConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ログイン')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: userIdController,
-              decoration: const InputDecoration(
-                labelText: 'ユーザーID',
-                hintText: 'your_user_id',
-                border: OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: obscure.value,
-              decoration: InputDecoration(
-                labelText: 'パスワード',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscure.value ? Icons.visibility_off : Icons.visibility,
-                  ),
-                  onPressed: () => obscure.value = !obscure.value,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ロゴ + タイトル
+                const Icon(
+                  Icons.directions_car,
+                  size: 56,
+                  color: Color(0xFF1A237E),
                 ),
-              ),
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => login(),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: loading.value ? null : login,
-              child: loading.value
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('ログイン'),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: loading.value
-                  ? null
-                  : () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterScreen(),
+                const SizedBox(height: 8),
+                Text(
+                  'Car Lovers',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: const Color(0xFF1A237E),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // カード
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'ログイン',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      );
-                    },
-              child: const Text('アカウントをお持ちでない方は新規登録'),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: userIdController,
+                          decoration: const InputDecoration(
+                            labelText: 'ユーザーID',
+                            hintText: 'your_user_id',
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: passwordController,
+                          obscureText: obscure.value,
+                          decoration: InputDecoration(
+                            labelText: 'パスワード',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                obscure.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () => obscure.value = !obscure.value,
+                            ),
+                          ),
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => login(),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: loading.value ? null : login,
+                          child: loading.value
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text('ログイン'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: loading.value
+                      ? null
+                      : () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
+                          );
+                        },
+                  child: const Text('アカウントをお持ちでない方は新規登録'),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

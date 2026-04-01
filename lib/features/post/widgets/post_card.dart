@@ -17,110 +17,148 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy/MM/dd HH:mm');
+    final dateFormat = DateFormat('yyyy/MM/dd');
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 画像
+          // 画像 + グラデーションオーバーレイ
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(4),
-              ),
-              child: Image.network(
-                post.thumbnailUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[300],
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  post.thumbnailUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFFE8EAF6),
                     child: const Center(
                       child: Icon(
-                        Icons.broken_image,
-                        size: 64,
-                        color: Colors.grey,
+                        Icons.directions_car,
+                        size: 48,
+                        color: Color(0xFF9FA8DA),
                       ),
                     ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.grey[300],
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                            : null,
+                  ),
+                  loadingBuilder: (_, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      color: const Color(0xFFE8EAF6),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: progress.expectedTotalBytes != null
+                              ? progress.cumulativeBytesLoaded /
+                                    progress.expectedTotalBytes!
+                              : null,
+                          color: const Color(0xFF1A237E),
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                // 下部グラデーション
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Color(0x88000000)],
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // 車両情報とタグ
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 車両名
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        post.displayName,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                  ),
+                ),
+                // 削除ボタン
+                if (canDelete && onDelete != null)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Material(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: onDelete,
+                        child: const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                    if (canDelete && onDelete != null)
-                      IconButton(
-                        onPressed: onDelete,
-                        icon: const Icon(Icons.delete_outline),
-                        color: Colors.red,
-                        tooltip: '投稿を削除',
-                      ),
-                  ],
+                  ),
+                // 投稿日時（画像下部）
+                Positioned(
+                  right: 10,
+                  bottom: 8,
+                  child: Text(
+                    dateFormat.format(post.createdAt),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+
+          // テキストエリア
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // メーカーChip
+                Chip(
+                  label: Text(post.carMaker),
+                  avatar: const Icon(
+                    Icons.directions_car,
+                    size: 14,
+                    color: Color(0xFF1A237E),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // 車種名 + 型式
+                Text(
+                  post.carModel +
+                      (post.carVariant != null && post.carVariant!.isNotEmpty
+                          ? '  ${post.carVariant}'
+                          : ''),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
 
                 // 説明
                 if (post.description != null &&
                     post.description!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     post.description!,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    maxLines: 3,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-
-                const SizedBox(height: 8),
-
-                // 投稿日時
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text(
-                      dateFormat.format(post.createdAt),
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),

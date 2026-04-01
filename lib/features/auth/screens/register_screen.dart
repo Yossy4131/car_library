@@ -57,73 +57,125 @@ class RegisterScreen extends HookConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('新規登録')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: userIdController,
-              decoration: const InputDecoration(
-                labelText: 'ユーザーID',
-                hintText: 'your_user_id',
-                helperText: '3〜30文字、英数字・ハイフン・アンダースコア',
-                border: OutlineInputBorder(),
-              ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: obscurePassword.value,
-              decoration: InputDecoration(
-                labelText: 'パスワード',
-                helperText: '8文字以上',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscurePassword.value
-                        ? Icons.visibility_off
-                        : Icons.visibility,
-                  ),
-                  onPressed: () =>
-                      obscurePassword.value = !obscurePassword.value,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ロゴ + タイトル
+                const Icon(
+                  Icons.directions_car,
+                  size: 56,
+                  color: Color(0xFF1A237E),
                 ),
-              ),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: confirmController,
-              obscureText: obscureConfirm.value,
-              decoration: InputDecoration(
-                labelText: 'パスワード（確認）',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscureConfirm.value
-                        ? Icons.visibility_off
-                        : Icons.visibility,
+                const SizedBox(height: 8),
+                Text(
+                  'Car Lovers',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: const Color(0xFF1A237E),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
                   ),
-                  onPressed: () => obscureConfirm.value = !obscureConfirm.value,
                 ),
-              ),
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => register(),
+                const SizedBox(height: 32),
+
+                // カード
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          '新規登録',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: userIdController,
+                          decoration: const InputDecoration(
+                            labelText: 'ユーザーID',
+                            hintText: 'your_user_id',
+                            helperText: '3〜30文字、英数字・ハイフン・アンダースコア',
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: passwordController,
+                          obscureText: obscurePassword.value,
+                          decoration: InputDecoration(
+                            labelText: 'パスワード',
+                            helperText: '8文字以上',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                obscurePassword.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () =>
+                                  obscurePassword.value = !obscurePassword.value,
+                            ),
+                          ),
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: confirmController,
+                          obscureText: obscureConfirm.value,
+                          decoration: InputDecoration(
+                            labelText: 'パスワード（確認）',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+
+                              icon: Icon(
+                                obscureConfirm.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () =>
+                                  obscureConfirm.value = !obscureConfirm.value,
+                            ),
+                          ),
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => register(),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: loading.value ? null : register,
+                          child: loading.value
+                              ? const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text('登録してログイン'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: loading.value
+                      ? null
+                      : () => Navigator.of(context).pop(),
+                  child: const Text('すでにアカウントをお持ちの方はログイン'),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: loading.value ? null : register,
-              child: loading.value
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('登録してログイン'),
-            ),
-          ],
+          ),
         ),
       ),
     );
