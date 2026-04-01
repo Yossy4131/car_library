@@ -1,8 +1,6 @@
 /// APIエンドポイントの定義
 class ApiEndpoints {
   static const String posts = '/posts';
-  static const String carMaster = '/cars';
-  static const String carMakers = '/cars/makers';
   static const String authRegister = '/auth/register';
   static const String authLogin = '/auth/login';
   static const String authMe = '/auth/me';

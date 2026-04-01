@@ -84,17 +84,6 @@
 | `created_at` | DATETIME | 投稿日時 |
 | `deleted_at` | DATETIME | 論理削除日時（NULL = 有効） |
 
-**`cars_master` テーブル**
-
-| カラム | 型 | 説明 |
-| :--- | :--- | :--- |
-| `id` | INTEGER (PK) | マスターID |
-| `maker` | TEXT | メーカー名 |
-| `model` | TEXT | 車種名 |
-| `variant` | TEXT | 型式 |
-| `year_from` | INTEGER | 発売開始年 |
-| `year_to` | INTEGER | 発売終了年（NULL = 現行） |
-
 ### 4.2 秘匿情報の管理
 
 * **クライアントサイド:** `--dart-define=API_BASE_URL=...` によるビルド時定数注入。デフォルト値として本番 URL をフォールバック設定。`.env` ファイル不要。

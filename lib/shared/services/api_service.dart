@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:car_library/core/config/app_config.dart';
 import 'package:car_library/core/constants/api_constants.dart';
 import 'package:car_library/features/post/models/post.dart';
-import 'package:car_library/features/car_master/models/car_master.dart';
 
 /// Cloudflare Workers APIとの通信を担当するサービスクラス
 class ApiService {
@@ -204,25 +203,6 @@ class ApiService {
     if (carMaker != null) body['car_maker'] = carMaker;
     if (carModel != null) body['car_model'] = carModel;
     await _patch('${ApiEndpoints.posts}/$id', body);
-  }
-
-  // ========== 車種マスター関連のAPI ==========
-
-  /// 車種マスター一覧を取得
-  Future<List<CarMaster>> getCars({String? maker, String? search}) async {
-    final queryParams = <String, String>{};
-    if (maker != null) queryParams['maker'] = maker;
-    if (search != null) queryParams['search'] = search;
-
-    final data = await _get(ApiEndpoints.carMaster, queryParams: queryParams);
-    final carsJson = data['cars'] as List;
-    return carsJson.map((json) => CarMaster.fromJson(json)).toList();
-  }
-
-  /// メーカー一覧を取得
-  Future<List<String>> getMakers() async {
-    final data = await _get(ApiEndpoints.carMakers);
-    return (data['makers'] as List).cast<String>();
   }
 
   // ========== 画像アップロード関連のAPI ==========
