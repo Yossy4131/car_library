@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seedColor = Color(0xFF1A237E); // ディープネイビー
+    const seedColor = Color(0xFF162F4E); // ディープネイビー
 
     return MaterialApp(
       title: AppConfig.appName,
@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
         ),
         // AppBar
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0D1B4B),
+          backgroundColor: Color(0xFF162F4E),
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: false,
@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
         // ElevatedButton
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1A237E),
+            backgroundColor: const Color(0xFF162F4E),
             foregroundColor: Colors.white,
             minimumSize: const Size.fromHeight(48),
             shape: RoundedRectangleBorder(
@@ -60,13 +60,11 @@ class MyApp extends StatelessWidget {
         ),
         // TextButton
         textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF1A237E),
-          ),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFF162F4E)),
         ),
         // FloatingActionButton
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFF1A237E),
+          backgroundColor: Color(0xFF162F4E),
           foregroundColor: Colors.white,
           extendedTextStyle: TextStyle(
             fontWeight: FontWeight.w600,
@@ -87,7 +85,7 @@ class MyApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
+            borderSide: const BorderSide(color: Color(0xFF162F4E), width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -99,14 +97,12 @@ class MyApp extends StatelessWidget {
         chipTheme: ChipThemeData(
           backgroundColor: const Color(0xFFE8EAF6),
           labelStyle: const TextStyle(
-            color: Color(0xFF1A237E),
+            color: Color(0xFF162F4E),
             fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           side: BorderSide.none,
         ),
         scaffoldBackgroundColor: const Color(0xFFF0F2F8),

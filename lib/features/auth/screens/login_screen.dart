@@ -43,13 +43,13 @@ class LoginScreen extends HookConsumerWidget {
                 const Icon(
                   Icons.directions_car,
                   size: 56,
-                  color: Color(0xFF1A237E),
+                  color: Color(0xFF162F4E),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Car Lovers',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFF1A237E),
+                    color: const Color(0xFF162F4E),
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
                   ),
@@ -65,9 +65,8 @@ class LoginScreen extends HookConsumerWidget {
                       children: [
                         Text(
                           'ログイン',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 20),
                         TextField(

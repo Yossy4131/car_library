@@ -69,13 +69,13 @@ class RegisterScreen extends HookConsumerWidget {
                 const Icon(
                   Icons.directions_car,
                   size: 56,
-                  color: Color(0xFF1A237E),
+                  color: Color(0xFF162F4E),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Car Lovers',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: const Color(0xFF1A237E),
+                    color: const Color(0xFF162F4E),
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
                   ),
@@ -91,9 +91,8 @@ class RegisterScreen extends HookConsumerWidget {
                       children: [
                         Text(
                           '新規登録',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 20),
                         TextField(
@@ -120,8 +119,8 @@ class RegisterScreen extends HookConsumerWidget {
                                     ? Icons.visibility_off
                                     : Icons.visibility,
                               ),
-                              onPressed: () =>
-                                  obscurePassword.value = !obscurePassword.value,
+                              onPressed: () => obscurePassword.value =
+                                  !obscurePassword.value,
                             ),
                           ),
                           textInputAction: TextInputAction.next,
@@ -134,7 +133,6 @@ class RegisterScreen extends HookConsumerWidget {
                             labelText: 'パスワード（確認）',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-
                               icon: Icon(
                                 obscureConfirm.value
                                     ? Icons.visibility_off

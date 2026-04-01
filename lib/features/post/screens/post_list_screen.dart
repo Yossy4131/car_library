@@ -22,7 +22,12 @@ class PostListScreen extends HookConsumerWidget {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.directions_car, size: 22),
+            Image.asset(
+              'assets/images/app_icon.png',
+              width: 32,
+              height: 32,
+              filterQuality: FilterQuality.high,
+            ),
             const SizedBox(width: 8),
             Text(
               'Car Lovers',
@@ -51,7 +56,7 @@ class PostListScreen extends HookConsumerWidget {
                   value: 'mypage',
                   child: Row(
                     children: [
-                      Icon(Icons.person, color: Color(0xFF0D1B4B)),
+                      Icon(Icons.person, color: Color(0xFF162F4E)),
                       SizedBox(width: 8),
                       Text('マイページ'),
                     ],
@@ -61,7 +66,7 @@ class PostListScreen extends HookConsumerWidget {
                   value: 'logout',
                   child: Row(
                     children: [
-                      Icon(Icons.logout, color: Color(0xFF0D1B4B)),
+                      Icon(Icons.logout, color: Color(0xFF162F4E)),
                       SizedBox(width: 8),
                       Text('ログアウト'),
                     ],
