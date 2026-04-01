@@ -189,9 +189,11 @@ class ApiService {
     return postsJson.map((json) => Post.fromJson(json)).toList();
   }
 
-  /// 投稿の任意フィールドを更新（型式・説明）
+  /// 投稿の任意フィールドを更新（メーカー・車種・型式・説明）
   Future<void> updatePost(
     int id, {
+    String? carMaker,
+    String? carModel,
     String? carVariant,
     String? description,
   }) async {
@@ -199,6 +201,8 @@ class ApiService {
       'car_variant': carVariant,
       'description': description,
     };
+    if (carMaker != null) body['car_maker'] = carMaker;
+    if (carModel != null) body['car_model'] = carModel;
     await _patch('${ApiEndpoints.posts}/$id', body);
   }
 

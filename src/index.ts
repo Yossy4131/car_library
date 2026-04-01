@@ -157,13 +157,25 @@ export default {
         const body = await request.json() as any;
         const description = body?.description !== undefined ? body.description : undefined;
         const carVariant = body?.car_variant !== undefined ? body.car_variant : undefined;
+        const carMaker = body?.car_maker !== undefined ? body.car_maker : undefined;
+        const carModel = body?.car_model !== undefined ? body.car_model : undefined;
 
-        if (description === undefined && carVariant === undefined) {
+        if (description === undefined && carVariant === undefined && carMaker === undefined && carModel === undefined) {
           return errorResponse('更新するフィールドがありません', 400);
         }
 
         const fields: string[] = [];
         const values: unknown[] = [];
+        if (carMaker !== undefined) {
+          if (!carMaker) return errorResponse('car_makerは必須です', 400);
+          fields.push('car_maker = ?');
+          values.push(carMaker);
+        }
+        if (carModel !== undefined) {
+          if (!carModel) return errorResponse('car_modelは必須です', 400);
+          fields.push('car_model = ?');
+          values.push(carModel);
+        }
         if (description !== undefined) {
           fields.push('description = ?');
           values.push(description || null);

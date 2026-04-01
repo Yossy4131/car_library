@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:car_library/features/post/models/post.dart';
 import 'package:car_library/features/post/providers/post_provider.dart';
 import 'package:car_library/features/auth/providers/auth_provider.dart';
+import 'package:car_library/features/car_master/providers/nhtsa_provider.dart';
 import 'package:intl/intl.dart';
 
 /// マイページ画面 — 自分の投稿一覧・削除・備考編集
@@ -220,76 +222,27 @@ class _MyPostCard extends HookConsumerWidget {
     );
   }
 
-  // 編集ダイアログ（型式・説明）
+  // 編集ダイアログ（メーカー・車種・型式・説明）
   Future<void> _showEditDialog(
     BuildContext context,
     WidgetRef ref,
     Post post,
   ) async {
-    final variantController = TextEditingController(
-      text: post.carVariant ?? '',
-    );
-    final descriptionController = TextEditingController(
-      text: post.description ?? '',
-    );
-
-    final confirmed = await showDialog<bool>(
+    final result = await showDialog<Map<String, dynamic>?>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('投稿を編集'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: variantController,
-                decoration: const InputDecoration(
-                  labelText: '型式',
-                  hintText: '例: ZVW50、FK7',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descriptionController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: '説明・コメント',
-                  hintText: 'この車について教えてください',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('キャンセル'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
+      builder: (ctx) => _EditPostDialog(post: post),
     );
 
-    if (confirmed != true || !context.mounted) return;
-
-    final newVariant = variantController.text.trim().isEmpty
-        ? null
-        : variantController.text.trim();
-    final newDescription = descriptionController.text.trim().isEmpty
-        ? null
-        : descriptionController.text.trim();
+    if (result == null || !context.mounted) return;
 
     final ok = await ref
         .read(postControllerProvider.notifier)
         .updatePost(
           post.id,
-          carVariant: newVariant,
-          description: newDescription,
+          carMaker: result['carMaker'] as String?,
+          carModel: result['carModel'] as String?,
+          carVariant: result['carVariant'] as String?,
+          description: result['description'] as String?,
         );
 
     if (!context.mounted) return;
@@ -352,4 +305,318 @@ class _MyPostCard extends HookConsumerWidget {
       ).showSnackBar(const SnackBar(content: Text('投稿の削除に失敗しました')));
     }
   }
+}
+
+// ============================================================
+// 編集ダイアログ（NHTSAオートコンプリート付き）
+// ============================================================
+
+class _EditPostDialog extends HookConsumerWidget {
+  final Post post;
+  const _EditPostDialog({required this.post});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedMaker = useState<String?>(post.carMaker);
+    final selectedModel = useState<String?>(post.carModel);
+    final makerFreeText = useState<String>(post.carMaker);
+    final modelFreeText = useState<String>(post.carModel);
+    final variantController = useTextEditingController(
+      text: post.carVariant ?? '',
+    );
+    final descriptionController = useTextEditingController(
+      text: post.description ?? '',
+    );
+
+    final nhtsaMakersAsync = ref.watch(nhtsaMakersProvider);
+    final nhtsaModelsAsync =
+        selectedMaker.value != null && selectedMaker.value!.isNotEmpty
+        ? ref.watch(nhtsaModelsProvider(selectedMaker.value!))
+        : const AsyncValue<List<String>>.data([]);
+
+    return AlertDialog(
+      title: const Text('投稿を編集'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // メーカーオートコンプリート
+              _buildMakerField(
+                nhtsaMakersAsync: nhtsaMakersAsync,
+                selectedMaker: selectedMaker,
+                selectedModel: selectedModel,
+                makerFreeText: makerFreeText,
+                modelFreeText: modelFreeText,
+              ),
+              const SizedBox(height: 16),
+              // 車種名オートコンプリート
+              _buildModelField(
+                nhtsaModelsAsync: nhtsaModelsAsync,
+                selectedMaker: selectedMaker,
+                selectedModel: selectedModel,
+                modelFreeText: modelFreeText,
+              ),
+              const SizedBox(height: 16),
+              // 型式
+              TextField(
+                controller: variantController,
+                decoration: const InputDecoration(
+                  labelText: '型式（任意）',
+                  hintText: '例: ZVW50、FK7',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 説明
+              TextField(
+                controller: descriptionController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: '説明・コメント',
+                  hintText: 'この車について教えてください',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('キャンセル'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final maker = (selectedMaker.value ?? makerFreeText.value).trim();
+            final model = (selectedModel.value ?? modelFreeText.value).trim();
+            Navigator.of(context).pop(<String, dynamic>{
+              'carMaker': maker.isEmpty ? post.carMaker : maker,
+              'carModel': model.isEmpty ? post.carModel : model,
+              'carVariant': variantController.text.trim().isEmpty
+                  ? null
+                  : variantController.text.trim(),
+              'description': descriptionController.text.trim().isEmpty
+                  ? null
+                  : descriptionController.text.trim(),
+            });
+          },
+          child: const Text('保存'),
+        ),
+      ],
+    );
+  }
+}
+
+// メーカー選択フィールド
+Widget _buildMakerField({
+  required AsyncValue<List<String>> nhtsaMakersAsync,
+  required ValueNotifier<String?> selectedMaker,
+  required ValueNotifier<String?> selectedModel,
+  required ValueNotifier<String> makerFreeText,
+  required ValueNotifier<String> modelFreeText,
+}) {
+  return nhtsaMakersAsync.when(
+    loading: () => const TextField(
+      decoration: InputDecoration(
+        labelText: 'メーカー *',
+        hintText: 'メーカー一覧を読み込み中...',
+        border: OutlineInputBorder(),
+        suffixIcon: Padding(
+          padding: EdgeInsets.all(12.0),
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      enabled: false,
+    ),
+    error: (e, _) => TextField(
+      decoration: const InputDecoration(
+        labelText: 'メーカー *',
+        hintText: '例: TOYOTA, HONDA（手動入力）',
+        border: OutlineInputBorder(),
+        helperText: 'APIが利用できません。直接入力してください',
+      ),
+      onChanged: (v) {
+        makerFreeText.value = v;
+        selectedMaker.value = null;
+        selectedModel.value = null;
+        modelFreeText.value = '';
+      },
+    ),
+    data: (makers) => Autocomplete<String>(
+      initialValue: TextEditingValue(text: makerFreeText.value),
+      optionsBuilder: (textEditingValue) {
+        final query = textEditingValue.text.trim();
+        if (query.isEmpty) return const Iterable<String>.empty();
+        final lower = query.toLowerCase();
+        return makers.where((m) => m.toLowerCase().contains(lower)).take(10);
+      },
+      onSelected: (value) {
+        selectedMaker.value = value;
+        makerFreeText.value = value;
+        selectedModel.value = null;
+        modelFreeText.value = '';
+      },
+      fieldViewBuilder: (ctx, controller, focusNode, onSubmit) {
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: const InputDecoration(
+            labelText: 'メーカー *',
+            hintText: 'メーカー名を入力して検索',
+            border: OutlineInputBorder(),
+            helperText: '例: TOYOTA, HONDA, NISSAN',
+          ),
+          onChanged: (v) {
+            makerFreeText.value = v;
+            if (selectedMaker.value != null && v != selectedMaker.value) {
+              selectedMaker.value = null;
+              selectedModel.value = null;
+              modelFreeText.value = '';
+            }
+          },
+        );
+      },
+      optionsViewBuilder: (ctx, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (ctx, index) {
+                  final option = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+// 車種名選択フィールド
+Widget _buildModelField({
+  required AsyncValue<List<String>> nhtsaModelsAsync,
+  required ValueNotifier<String?> selectedMaker,
+  required ValueNotifier<String?> selectedModel,
+  required ValueNotifier<String> modelFreeText,
+}) {
+  final hasMaker =
+      selectedMaker.value != null && selectedMaker.value!.isNotEmpty;
+
+  if (!hasMaker) {
+    return const TextField(
+      decoration: InputDecoration(
+        labelText: '車種名 *',
+        hintText: '先にメーカーを選択してください',
+        border: OutlineInputBorder(),
+      ),
+      enabled: false,
+    );
+  }
+
+  return nhtsaModelsAsync.when(
+    loading: () => const TextField(
+      decoration: InputDecoration(
+        labelText: '車種名 *',
+        hintText: '車種一覧を読み込み中...',
+        border: OutlineInputBorder(),
+        suffixIcon: Padding(
+          padding: EdgeInsets.all(12.0),
+          child: SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+      enabled: false,
+    ),
+    error: (e, _) => TextField(
+      decoration: const InputDecoration(
+        labelText: '車種名 *',
+        hintText: '例: Corolla, Civic（手動入力）',
+        border: OutlineInputBorder(),
+        helperText: 'APIが利用できません。直接入力してください',
+      ),
+      onChanged: (v) {
+        modelFreeText.value = v;
+        selectedModel.value = null;
+      },
+    ),
+    data: (models) => Autocomplete<String>(
+      key: ValueKey(selectedMaker.value),
+      initialValue: TextEditingValue(text: modelFreeText.value),
+      optionsBuilder: (textEditingValue) {
+        final query = textEditingValue.text.trim();
+        if (query.isEmpty) return models.take(10);
+        final lower = query.toLowerCase();
+        return models.where((m) => m.toLowerCase().contains(lower)).take(10);
+      },
+      onSelected: (value) {
+        selectedModel.value = value;
+        modelFreeText.value = value;
+      },
+      fieldViewBuilder: (ctx, controller, focusNode, onSubmit) {
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: const InputDecoration(
+            labelText: '車種名 *',
+            hintText: '車種名を入力して検索',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (v) {
+            modelFreeText.value = v;
+            if (selectedModel.value != null && v != selectedModel.value) {
+              selectedModel.value = null;
+            }
+          },
+        );
+      },
+      optionsViewBuilder: (ctx, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: options.length,
+                itemBuilder: (ctx, index) {
+                  final option = options.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(option),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }

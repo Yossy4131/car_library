@@ -89,9 +89,11 @@ class PostController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  /// 投稿の任意フィールド（型式・説明）を更新
+  /// 投稿の任意フィールド（メーカー・車種・型式・説明）を更新
   Future<bool> updatePost(
     int postId, {
+    String? carMaker,
+    String? carModel,
     String? carVariant,
     String? description,
   }) async {
@@ -99,6 +101,8 @@ class PostController extends StateNotifier<AsyncValue<void>> {
     try {
       await _apiService.updatePost(
         postId,
+        carMaker: carMaker,
+        carModel: carModel,
         carVariant: carVariant,
         description: description,
       );

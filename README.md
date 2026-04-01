@@ -71,10 +71,10 @@ npm run dev
 **Flutter アプリ（ターミナル 2）:**
 
 ```bash
-flutter run -d chrome --web-browser-flag="--disable-web-security"
+flutter run -d chrome --web-browser-flag="--disable-web-security" --dart-define=API_BASE_URL=http://127.0.0.1:8787
 ```
 
-`.env` ファイルに `API_BASE_URL=http://127.0.0.1:8787` が設定されていることを確認してください。
+> `--dart-define=API_BASE_URL=...` でAPIのURLを注入します（`.env` ファイルは不要です）。
 
 ## 本番デプロイ
 
