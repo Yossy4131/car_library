@@ -1,3 +1,4 @@
+// CI/CD test - 2026-04-01
 import { uploadAndMaskImage, maskImageRegions, detectLicensePlates, resizeImage } from './image-processing';
 import { extractBearerToken, generateJWT, verifyJWT, hashPassword, verifyPassword } from './auth';
 
