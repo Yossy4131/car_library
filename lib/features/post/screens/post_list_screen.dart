@@ -36,7 +36,7 @@ class PostListScreen extends HookConsumerWidget {
         filterModel.value != null ||
         filterTag.value != null;
 
-    Future<void> openFilterSheet() async {
+    Future<void> openSearchSheet() async {
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -126,26 +126,23 @@ class PostListScreen extends HookConsumerWidget {
           IconButton(
             icon: Badge(
               isLabelVisible: hasFilter,
-              child: const Icon(Icons.filter_list),
+              child: const Icon(Icons.search),
             ),
-            onPressed: openFilterSheet,
+            tooltip: '検索',
+            onPressed: openSearchSheet,
           ),
         ],
       ),
       body: Column(
         children: [
-          // 絞込中バナー
+          // 検索中バナー
           if (hasFilter)
             Container(
               color: const Color(0xFF162F4E).withOpacity(0.08),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.filter_alt,
-                    size: 16,
-                    color: Color(0xFF162F4E),
-                  ),
+                  const Icon(Icons.search, size: 16, color: Color(0xFF162F4E)),
                   const SizedBox(width: 6),
                   if (filterMaker.value != null)
                     Chip(
@@ -316,7 +313,7 @@ class PostListScreen extends HookConsumerWidget {
   }
 }
 
-/// フィルターボトムシート
+/// 検索ボトムシート
 class _FilterSheet extends HookConsumerWidget {
   final String? initialMaker;
   final String? initialModel;
@@ -366,7 +363,7 @@ class _FilterSheet extends HookConsumerWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '絞り込み',
+              '検索',
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -471,7 +468,7 @@ class _FilterSheet extends HookConsumerWidget {
                 );
                 Navigator.pop(context);
               },
-              child: const Text('この条件で絞り込む'),
+              child: const Text('この条件で検索する'),
             ),
             const SizedBox(height: 8),
             TextButton(
@@ -479,7 +476,7 @@ class _FilterSheet extends HookConsumerWidget {
                 onApply(null, null, null);
                 Navigator.pop(context);
               },
-              child: const Text('フィルターをリセット'),
+              child: const Text('検索条件をリセット'),
             ),
           ],
         ),
