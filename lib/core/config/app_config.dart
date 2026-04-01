@@ -7,7 +7,7 @@ class AppConfig {
   );
 
   /// アプリ名
-  static const String appName = '皆の車博覧会';
+  static const String appName = 'Car Lovers';
 
   /// 環境変数が正しく設定されているかをチェック
   static bool get isConfigured => apiBaseUrl.isNotEmpty;

@@ -1,6 +1,6 @@
 {
-    "name": "car_library",
-    "short_name": "car_library",
+    "name": "Car Lovers",
+    "short_name": "Car Lovers",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
