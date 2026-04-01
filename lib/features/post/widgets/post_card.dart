@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:car_library/features/post/models/post.dart';
+import 'package:car_library/features/post/providers/post_provider.dart';
 import 'package:car_library/features/post/screens/post_detail_screen.dart';
 import 'package:intl/intl.dart';
 
 /// 投稿カードウィジェット
-class PostCard extends StatelessWidget {
+class PostCard extends ConsumerWidget {
   final Post post;
   final bool canDelete;
   final VoidCallback? onDelete;
@@ -17,16 +19,20 @@ class PostCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFormat = DateFormat('yyyy/MM/dd');
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => PostDetailScreen(post: post))),
+        onTap: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => PostDetailScreen(post: post)),
+          );
+          ref.invalidate(postsProvider);
+          ref.invalidate(myPostsProvider);
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

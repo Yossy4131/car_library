@@ -137,9 +137,14 @@ class _MyPostCard extends HookConsumerWidget {
           AspectRatio(
             aspectRatio: 16 / 9,
             child: InkWell(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => PostDetailScreen(post: post)),
-              ),
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PostDetailScreen(post: post),
+                  ),
+                );
+                ref.invalidate(myPostsProvider);
+              },
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(4),
