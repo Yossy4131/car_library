@@ -46,7 +46,6 @@ app.*.map.json
 
 # Cloudflare Workers
 .wrangler/
-wrangler.toml
 
 # Environment variables
 .env
