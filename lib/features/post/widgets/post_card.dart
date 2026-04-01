@@ -33,7 +33,7 @@ class PostCard extends StatelessWidget {
                 top: Radius.circular(4),
               ),
               child: Image.network(
-                post.imageUrl,
+                post.thumbnailUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(

@@ -107,7 +107,7 @@ class _MyPostCard extends HookConsumerWidget {
                 top: Radius.circular(4),
               ),
               child: Image.network(
-                post.imageUrl,
+                post.thumbnailUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey[300],

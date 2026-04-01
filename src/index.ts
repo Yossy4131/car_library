@@ -1,4 +1,4 @@
-import { uploadAndMaskImage, maskImageRegions, detectLicensePlates } from './image-processing';
+import { uploadAndMaskImage, maskImageRegions, detectLicensePlates, resizeImage } from './image-processing';
 import { extractBearerToken, generateJWT, verifyJWT, hashPassword, verifyPassword } from './auth';
 
 export interface Env {
@@ -221,35 +221,6 @@ export default {
         return jsonResponse({ message: 'Post deleted successfully' });
       }
 
-      // ========== 車種マスター関連のエンドポイント ==========
-
-      if (path === '/cars' && method === 'GET') {
-        const maker = url.searchParams.get('maker');
-        const search = url.searchParams.get('search');
-
-        let query = 'SELECT * FROM cars_master';
-        const params: any[] = [];
-
-        if (maker) {
-          query += ' WHERE maker = ?';
-          params.push(maker);
-        } else if (search) {
-          query += ' WHERE maker LIKE ? OR model LIKE ?';
-          params.push(`%${search}%`, `%${search}%`);
-        }
-
-        query += ' ORDER BY maker, model, year_from DESC';
-        const { results } = await env.DB.prepare(query).bind(...params).all();
-        return jsonResponse({ cars: results });
-      }
-
-      if (path === '/cars/makers' && method === 'GET') {
-        const { results } = await env.DB.prepare(
-          'SELECT DISTINCT maker FROM cars_master ORDER BY maker'
-        ).all();
-        return jsonResponse({ makers: results.map((r: any) => r.maker) });
-      }
-
       // ========== 認証関連のエンドポイント ==========
 
       if (path === '/auth/register' && method === 'POST') {
@@ -467,6 +438,8 @@ export default {
 
       if (path.startsWith('/images/') && method === 'GET') {
         const key = path.replace('/images/', '');
+        const widthParam = url.searchParams.get('w');
+        const qualityParam = url.searchParams.get('q');
         try {
           const object = await env.CAR_IMAGES.get(key);
           if (object === null) {
@@ -478,7 +451,21 @@ export default {
           headers.set('etag', object.httpEtag);
           headers.set('cache-control', 'public, max-age=31536000');
           headers.append('Access-Control-Allow-Origin', '*');
-          return new Response(object.body, { headers });
+
+          // ?w= パラメータなし → オリジナルをそのまま返す
+          if (!widthParam) {
+            return new Response(object.body, { headers });
+          }
+
+          // ?w= 指定あり → Photon でリサイズして返す
+          const width = Math.min(Math.max(parseInt(widthParam) || 800, 100), 2000);
+          const quality = Math.min(Math.max(parseInt(qualityParam || '80'), 20), 95);
+
+          const imageData = await object.arrayBuffer();
+          const resized = await resizeImage(imageData, width, quality);
+
+          headers.set('content-type', 'image/jpeg');
+          return new Response(resized, { headers });
         } catch (error) {
           console.error('Image fetch error:', error);
           return errorResponse('Failed to fetch image', 500);

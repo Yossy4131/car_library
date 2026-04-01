@@ -65,6 +65,10 @@ class Post {
     return parts.join(' ');
   }
 
+  /// サムネイル画像URL（幅800pxにリサイズ・圧縮済み）
+  /// 一覧表示での転送量削減に使用する
+  String get thumbnailUrl => '$imageUrl?w=800&q=80';
+
   /// コピーを作成
   Post copyWith({
     int? id,

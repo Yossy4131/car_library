@@ -3,7 +3,7 @@
  * ナンバープレートのマスキング処理
  */
 
-import { PhotonImage } from '@cf-wasm/photon/workerd';
+import { PhotonImage, resize, SamplingFilter } from '@cf-wasm/photon/workerd';
 
 /**
  * 画像上の矩形領域をブラーでマスキング
@@ -113,7 +113,46 @@ export async function maskImageRegions(
 }
 
 /**
- * Workers AIを使用してナンバープレートを検出
+ * 画像を指定幅にリサイズしJPEGで返す
+ * @param imageData 元画像データ
+ * @param targetWidth リサイズ後の幅（px）
+ * @param quality JPEG品質（20−95）
+ * @returns リサイズ済み画像データ
+ */
+export async function resizeImage(
+  imageData: ArrayBuffer,
+  targetWidth: number,
+  quality: number = 80
+): Promise<ArrayBuffer> {
+  try {
+    const inputBytes = new Uint8Array(imageData);
+    const img = PhotonImage.new_from_byteslice(inputBytes);
+
+    const originalWidth = img.get_width();
+    const originalHeight = img.get_height();
+
+    // リクエスト幅が元画像以上ならリサイズ不要
+    if (targetWidth >= originalWidth) {
+      const output = img.get_bytes_jpeg(quality);
+      img.free();
+      return output.buffer as ArrayBuffer;
+    }
+
+    const targetHeight = Math.round((originalHeight / originalWidth) * targetWidth);
+    const resized = resize(img, targetWidth, targetHeight, SamplingFilter.Triangle);
+    img.free();
+
+    const output = resized.get_bytes_jpeg(quality);
+    resized.free();
+
+    return output.buffer as ArrayBuffer;
+  } catch (error) {
+    console.error('Resize error:', error);
+    return imageData;
+  }
+}
+
+/**
  * @param env Cloudflare環境変数
  * @param imageData 画像データ
  * @returns 検出されたナンバープレートの位置情報（ピクセル座標）
