@@ -82,7 +82,7 @@ class PostListScreen extends HookConsumerWidget {
                   context,
                 ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
               },
-              child: const Text('ログイン'),
+              child: const Text('ログイン', style: TextStyle(color: Colors.white)),
             ),
           IconButton(
             icon: const Icon(Icons.filter_list),
