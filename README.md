@@ -1,5 +1,7 @@
 # Car Lovers
 
+🚗 **本番サイト: https://car-library.pages.dev/**
+
 車の写真をナンバープレート自動マスキング付きで共有できるコミュニティアプリ  
 （Flutter + Cloudflare Workers + D1 + R2 + Workers AI）
 

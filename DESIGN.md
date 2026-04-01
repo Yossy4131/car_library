@@ -376,4 +376,5 @@ binding = "AI"
 
 | サービス | URL |
 | :--- | :--- |
+| Flutter Web（本番） | https://car-library.pages.dev/ |
 | Workers API | `https://car-library-api.y-yoshida1031.workers.dev` |
