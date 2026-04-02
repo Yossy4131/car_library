@@ -19,7 +19,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final userId = prefs.getString(_userIdKey);
     if (token != null && userId != null) {
       ref.read(apiServiceProvider).setAuthToken(token);
-      state = state.copyWith(token: token, userId: userId);
+      try {
+        // トークンが本番でも有効か検証
+        await ref.read(apiServiceProvider).getCurrentUser();
+        state = state.copyWith(token: token, userId: userId);
+      } catch (_) {
+        // 無効（期限切れ・JWT_SECRET変更など）の場合はクリア
+        await prefs.remove(_tokenKey);
+        await prefs.remove(_userIdKey);
+        ref.read(apiServiceProvider).setAuthToken(null);
+      }
     }
   }
 
