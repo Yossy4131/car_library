@@ -355,9 +355,9 @@ class MaskingCanvas extends StatelessWidget {
                                       index,
                                       rect.copyWith(
                                         width: (rect.width + details.delta.dx)
-                                            .clamp(50, 1000),
+                                            .clamp(10, 1000),
                                         height: (rect.height + details.delta.dy)
-                                            .clamp(50, 1000),
+                                            .clamp(10, 1000),
                                       ),
                                     );
                                   },
