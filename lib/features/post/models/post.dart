@@ -7,6 +7,7 @@ class Post {
   final String? carVariant;
   final String imageUrl;
   final String? originalImageUrl;
+  final String? videoUrl;
   final String? description;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -22,6 +23,7 @@ class Post {
     this.carVariant,
     required this.imageUrl,
     this.originalImageUrl,
+    this.videoUrl,
     this.description,
     required this.createdAt,
     required this.updatedAt,
@@ -38,8 +40,9 @@ class Post {
       carMaker: json['car_maker'] as String,
       carModel: json['car_model'] as String,
       carVariant: json['car_variant'] as String?,
-      imageUrl: json['image_url'] as String,
+      imageUrl: json['image_url'] as String? ?? '',
       originalImageUrl: json['original_image_url'] as String?,
+      videoUrl: json['video_url'] as String?,
       description: json['description'] as String?,
       createdAt: _parseUtc(json['created_at'] as String),
       updatedAt: _parseUtc(json['updated_at'] as String),
@@ -69,6 +72,7 @@ class Post {
       'car_variant': carVariant,
       'image_url': imageUrl,
       'original_image_url': originalImageUrl,
+      'video_url': videoUrl,
       'description': description,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -87,9 +91,12 @@ class Post {
     return parts.join(' ');
   }
 
-  /// サムネイル画像URL（幅800pxにリサイズ・圧縮済み）
+  /// 動画投稿かどうか
+  bool get isVideo => videoUrl != null && videoUrl!.isNotEmpty;
+
+  /// サムネイル画像URL（動画はそのまま、画像は幅800pxリサイズ）
   /// 一覧表示での転送量削減に使用する
-  String get thumbnailUrl => '$imageUrl?w=800&q=80';
+  String get thumbnailUrl => isVideo ? videoUrl! : '$imageUrl?w=800&q=80';
 
   /// コピーを作成
   Post copyWith({
@@ -100,6 +107,7 @@ class Post {
     String? carVariant,
     String? imageUrl,
     String? originalImageUrl,
+    String? videoUrl,
     String? description,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -115,6 +123,7 @@ class Post {
       carVariant: carVariant ?? this.carVariant,
       imageUrl: imageUrl ?? this.imageUrl,
       originalImageUrl: originalImageUrl ?? this.originalImageUrl,
+      videoUrl: videoUrl ?? this.videoUrl,
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -132,6 +141,7 @@ class CreatePostRequest {
   final String carModel;
   final String? carVariant;
   final String imageUrl;
+  final String? videoUrl;
   final String? description;
   final List<String> tags;
 
@@ -140,7 +150,8 @@ class CreatePostRequest {
     required this.carMaker,
     required this.carModel,
     this.carVariant,
-    required this.imageUrl,
+    this.imageUrl = '',
+    this.videoUrl,
     this.description,
     this.tags = const [],
   });
@@ -152,6 +163,7 @@ class CreatePostRequest {
       'car_model': carModel,
       'car_variant': carVariant,
       'image_url': imageUrl,
+      'video_url': videoUrl,
       'description': description,
       'tags': tags,
     };

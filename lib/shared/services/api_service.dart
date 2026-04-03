@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 import 'package:car_library/core/config/app_config.dart';
 import 'package:car_library/core/constants/api_constants.dart';
 import 'package:car_library/features/post/models/post.dart';
@@ -293,6 +295,53 @@ class ApiService {
     }
   }
 
+  /// 動画をアップロード
+  Future<VideoUploadResult> uploadVideo(
+    List<int> videoBytes,
+    String fileName,
+  ) async {
+    final uri = Uri.parse('$_baseUrl/upload/video');
+
+    try {
+      final request = http.MultipartRequest('POST', uri);
+      if (_authToken != null && _authToken!.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
+      final mimeType = lookupMimeType(fileName) ?? 'video/mp4';
+      final mediaType = MediaType.parse(mimeType);
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          videoBytes,
+          filename: fileName,
+          contentType: mediaType,
+        ),
+      );
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 120), // 動画は長めにタイムアウト
+      );
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final rawUrl = data['videoUrl'] as String;
+        return VideoUploadResult(
+          videoUrl: rawUrl.startsWith('http') ? rawUrl : '$_baseUrl$rawUrl',
+        );
+      } else {
+        final error = json.decode(response.body);
+        throw ApiException(
+          error['error'] ?? 'Video upload failed',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error during video upload: $e', 0);
+    }
+  }
+
   /// AIでナンバープレートを検出（アップロードなし）
   Future<List<MaskingBox>> detectLicensePlates(
     List<int> imageBytes,
@@ -426,6 +475,12 @@ class ImageUploadResult {
     required this.masked,
     this.detectedBoxes = const [],
   });
+}
+
+/// 動画アップロード結果
+class VideoUploadResult {
+  final String videoUrl;
+  VideoUploadResult({required this.videoUrl});
 }
 
 class MaskingBox {

@@ -130,21 +130,25 @@ export default {
         }
 
         const body = await request.json() as any;
-        const { car_maker, car_model, car_variant, image_url, description, tags } = body;
+        const { car_maker, car_model, car_variant, image_url, video_url, description, tags } = body;
 
-        if (!car_maker || !car_model || !image_url) {
-          return errorResponse('Missing required fields: car_maker, car_model, image_url');
+        if (!car_maker || !car_model) {
+          return errorResponse('Missing required fields: car_maker, car_model');
+        }
+        if (!image_url && !video_url) {
+          return errorResponse('image_url または video_url のどちらかは必須です');
         }
 
         const result = await env.DB.prepare(
-          `INSERT INTO posts (user_id, car_maker, car_model, car_variant, image_url, description)
-           VALUES (?, ?, ?, ?, ?, ?)`
+          `INSERT INTO posts (user_id, car_maker, car_model, car_variant, image_url, video_url, description)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           userId,
           car_maker,
           car_model,
           car_variant || null,
-          image_url,
+          image_url || '',
+          video_url || null,
           description || null
         ).run();
 
@@ -486,6 +490,59 @@ export default {
         }
       }
 
+      // ========== 動画アップロード ==========
+
+      if (path === '/upload/video' && method === 'POST') {
+        const userId = await requireAuth(request, env);
+        if (!userId) {
+          return errorResponse('Unauthorized', 401);
+        }
+
+        const contentType = request.headers.get('content-type') || '';
+        if (!contentType.includes('multipart/form-data')) {
+          return errorResponse('Content-Type must be multipart/form-data');
+        }
+
+        try {
+          const formData = await request.formData();
+          const fileEntry = formData.get('file');
+
+          if (!fileEntry || typeof fileEntry === 'string') {
+            return errorResponse('No file provided');
+          }
+
+          const file = fileEntry as File;
+          const allowedTypes = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo'];
+          if (!allowedTypes.includes(file.type)) {
+            return errorResponse('mp4, mov, webm, avi のみアップロードできます', 400);
+          }
+
+          const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+          if (file.size > MAX_VIDEO_SIZE) {
+            return errorResponse('動画ファイルは100MB以下にしてください', 400);
+          }
+
+          const arrayBuffer = await file.arrayBuffer();
+
+          const timestamp = Date.now();
+          const randomStr = Math.random().toString(36).substring(2, 15);
+          const fileExt = file.name.split('.').pop() || 'mp4';
+          const key = `uploads/videos/${timestamp}-${randomStr}.${fileExt}`;
+
+          await env.CAR_IMAGES.put(key, arrayBuffer, {
+            httpMetadata: { contentType: file.type },
+          });
+
+          return jsonResponse({
+            message: 'Video uploaded successfully',
+            videoUrl: `/images/${key}`,
+          }, 201);
+        } catch (error) {
+          console.error('Video upload error:', error);
+          return errorResponse('Failed to upload video', 500);
+        }
+      }
+
       if (path.startsWith('/images/') && method === 'GET') {
         const key = path.replace('/images/', '');
         const widthParam = url.searchParams.get('w');
@@ -501,9 +558,11 @@ export default {
           headers.set('etag', object.httpEtag);
           headers.set('cache-control', 'public, max-age=31536000');
           headers.append('Access-Control-Allow-Origin', '*');
+          headers.append('Accept-Ranges', 'bytes');
 
-          // ?w= パラメータなし → オリジナルをそのまま返す
-          if (!widthParam) {
+          // 動画ファイルまたは ?w= なし → オリジナルをそのまま返す
+          const ct = headers.get('content-type') || '';
+          if (!widthParam || ct.startsWith('video/')) {
             return new Response(object.body, { headers });
           }
 

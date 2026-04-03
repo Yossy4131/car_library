@@ -58,6 +58,9 @@ dependencies:
   http_parser: ^4.0.2
   mime: ^1.0.6
 
+  # Video player (web/mobile)
+  video_player: ^2.9.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

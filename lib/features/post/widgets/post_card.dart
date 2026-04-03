@@ -36,42 +36,63 @@ class PostCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 画像 + グラデーションオーバーレイ
+            // 画像/動画 + グラデーションオーバーレイ
             AspectRatio(
               aspectRatio: 16 / 9,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
-                    post.thumbnailUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: const Color(0xFFE8EAF6),
+                  if (post.isVideo)
+                    Container(
+                      color: Colors.black87,
                       child: const Center(
                         child: Icon(
-                          Icons.directions_car,
+                          Icons.videocam,
                           size: 48,
-                          color: Color(0xFF9FA8DA),
+                          color: Colors.white38,
                         ),
                       ),
-                    ),
-                    loadingBuilder: (_, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
+                    )
+                  else
+                    Image.network(
+                      post.thumbnailUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
                         color: const Color(0xFFE8EAF6),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: progress.expectedTotalBytes != null
-                                ? progress.cumulativeBytesLoaded /
-                                      progress.expectedTotalBytes!
-                                : null,
-                            color: const Color(0xFF162F4E),
-                            strokeWidth: 2,
+                        child: const Center(
+                          child: Icon(
+                            Icons.directions_car,
+                            size: 48,
+                            color: Color(0xFF9FA8DA),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                      loadingBuilder: (_, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          color: const Color(0xFFE8EAF6),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded /
+                                        progress.expectedTotalBytes!
+                                  : null,
+                              color: const Color(0xFF162F4E),
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  // 動画再生アイコンオーバーレイ
+                  if (post.isVideo)
+                    const Center(
+                      child: Icon(
+                        Icons.play_circle_filled,
+                        size: 56,
+                        color: Colors.white70,
+                      ),
+                    ),
                   // 下部グラデーション
                   Positioned(
                     left: 0,

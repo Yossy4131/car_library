@@ -7,6 +7,7 @@ import 'package:car_library/features/post/providers/like_comment_provider.dart';
 import 'package:car_library/features/auth/providers/auth_provider.dart';
 import 'package:car_library/features/auth/screens/login_screen.dart';
 import 'package:car_library/shared/providers/api_service_provider.dart';
+import 'package:car_library/features/post/widgets/video_player_widget.dart';
 import 'package:intl/intl.dart';
 
 /// 投稿詳細画面 — 写真をフル表示し、いいね・コメントができる
@@ -78,42 +79,44 @@ class PostDetailScreen extends HookConsumerWidget {
       ),
       body: Column(
         children: [
-          // フル表示画像エリア
+          // フル表示メディアエリア
           Expanded(
             flex: 5,
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 5.0,
-              child: Center(
-                child: Image.network(
-                  post.imageUrl,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.broken_image, size: 64, color: Colors.white38),
-                      SizedBox(height: 12),
-                      Text(
-                        '画像を読み込めませんでした',
-                        style: TextStyle(color: Colors.white54),
+            child: post.isVideo
+                ? VideoPlayerWidget(url: post.videoUrl!)
+                : InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 5.0,
+                    child: Center(
+                      child: Image.network(
+                        post.imageUrl,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.broken_image, size: 64, color: Colors.white38),
+                            SizedBox(height: 12),
+                            Text(
+                              '画像を読み込めませんでした',
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                          ],
+                        ),
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded /
+                                        progress.expectedTotalBytes!
+                                  : null,
+                              color: Colors.white54,
+                            ),
+                          );
+                        },
                       ),
-                    ],
+                    ),
                   ),
-                  loadingBuilder: (_, child, progress) {
-                    if (progress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: progress.expectedTotalBytes != null
-                            ? progress.cumulativeBytesLoaded /
-                                  progress.expectedTotalBytes!
-                            : null,
-                        color: Colors.white54,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
           ),
 
           // 下部パネル（情報 + いいね + コメント）

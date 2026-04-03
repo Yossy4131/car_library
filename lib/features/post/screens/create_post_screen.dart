@@ -11,6 +11,7 @@ import 'package:car_library/features/car_master/providers/nhtsa_provider.dart';
 import 'package:car_library/features/mypage/providers/my_car_provider.dart';
 import 'package:car_library/shared/services/api_service.dart';
 import 'package:car_library/shared/providers/api_service_provider.dart';
+import 'package:car_library/features/post/widgets/video_player_widget.dart';
 
 /// 新規投稿作成画面
 class CreatePostScreen extends HookConsumerWidget {
@@ -21,6 +22,9 @@ class CreatePostScreen extends HookConsumerWidget {
     final picker = useMemoized(() => ImagePicker());
     final selectedImage = useState<XFile?>(null);
     final imageBytes = useState<Uint8List?>(null);
+    final selectedVideo = useState<XFile?>(null);
+    final videoBytes = useState<Uint8List?>(null);
+    final isVideoMode = useState(false);
     final isUploading = useState(false);
 
     // NHTSA 選択状態
@@ -36,6 +40,41 @@ class CreatePostScreen extends HookConsumerWidget {
     final tags = useState<List<String>>([]);
     final maskingRects = useState<List<MaskingRect>>([]);
     final isDetecting = useState(false);
+
+    // 動画選択処理
+    Future<void> pickVideo() async {
+      try {
+        final XFile? video = await picker.pickVideo(
+          source: ImageSource.gallery,
+          maxDuration: const Duration(minutes: 3),
+        );
+        if (video != null) {
+          final bytes = await video.readAsBytes();
+          const maxSizeBytes = 100 * 1024 * 1024; // 100MB
+          if (bytes.length > maxSizeBytes) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('動画ファイルは100MB以下にしてください')),
+              );
+            }
+            return;
+          }
+          selectedVideo.value = video;
+          videoBytes.value = bytes;
+          // 画像選択をリセット
+          selectedImage.value = null;
+          imageBytes.value = null;
+          maskingRects.value = [];
+          isVideoMode.value = true;
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('動画の選択に失敗しました: $e')),
+          );
+        }
+      }
+    }
 
     // マイカー情報で初期値をセット（初回マウント時のみ）
     final myCar = ref.read(myCarProvider);
@@ -97,6 +136,11 @@ class CreatePostScreen extends HookConsumerWidget {
           final bytes = await image.readAsBytes();
           imageBytes.value = bytes;
 
+          // 動画選択をリセット
+          selectedVideo.value = null;
+          videoBytes.value = null;
+          isVideoMode.value = false;
+
           // 新しい画像を選択したら、前のマスキング領域をクリア
           maskingRects.value = [];
 
@@ -157,10 +201,18 @@ class CreatePostScreen extends HookConsumerWidget {
 
     // 投稿処理
     Future<void> submitPost() async {
-      if (selectedImage.value == null || imageBytes.value == null) {
+      if (!isVideoMode.value &&
+          (selectedImage.value == null || imageBytes.value == null)) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('画像を選択してください')));
+        ).showSnackBar(const SnackBar(content: Text('画像または動画を選択してください')));
+        return;
+      }
+      if (isVideoMode.value &&
+          (selectedVideo.value == null || videoBytes.value == null)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('動画を選択してください')));
         return;
       }
 
@@ -183,27 +235,45 @@ class CreatePostScreen extends HookConsumerWidget {
           throw Exception('サインインが必要です');
         }
 
-        // 1. 画像をアップロード
-        // 手動マスキング領域がある場合はそれを優先（AI検出を無効化）
-        final hasManualRects = maskingRects.value.isNotEmpty;
+        // 1. メディアをアップロード
+        String mediaImageUrl = '';
+        String? mediaVideoUrl;
+        bool uploadedMasked = false;
+        int uploadedDetectedCount = 0;
 
-        final uploadResult = await apiService.uploadImage(
-          imageBytes.value!,
-          selectedImage.value!.name,
-          enableMasking: hasManualRects ? false : true,
-          maskingRects: hasManualRects
-              ? maskingRects.value
-                    .map(
-                      (rect) => MaskingBox(
-                        x: rect.x,
-                        y: rect.y,
-                        width: rect.width,
-                        height: rect.height,
-                      ),
-                    )
-                    .toList()
-              : null,
-        );
+        if (isVideoMode.value) {
+          // 動画アップロード（マスキングなし）
+          final videoResult = await apiService.uploadVideo(
+            videoBytes.value!,
+            selectedVideo.value!.name,
+          );
+          mediaVideoUrl = videoResult.videoUrl;
+        } else {
+          // 画像アップロード（マスキングあり）
+          // 手動マスキング領域がある場合はそれを優先（AI検出を無効化）
+          final hasManualRects = maskingRects.value.isNotEmpty;
+
+          final uploadResult = await apiService.uploadImage(
+            imageBytes.value!,
+            selectedImage.value!.name,
+            enableMasking: hasManualRects ? false : true,
+            maskingRects: hasManualRects
+                ? maskingRects.value
+                      .map(
+                        (rect) => MaskingBox(
+                          x: rect.x,
+                          y: rect.y,
+                          width: rect.width,
+                          height: rect.height,
+                        ),
+                      )
+                      .toList()
+                : null,
+          );
+          mediaImageUrl = uploadResult.imageUrl;
+          uploadedMasked = uploadResult.masked;
+          uploadedDetectedCount = uploadResult.detectedCount;
+        }
 
         // 2. 投稿を作成
         final maker = (selectedMaker.value ?? makerFreeText.value).trim();
@@ -215,7 +285,8 @@ class CreatePostScreen extends HookConsumerWidget {
           carVariant: variantController.text.isEmpty
               ? null
               : variantController.text,
-          imageUrl: uploadResult.imageUrl,
+          imageUrl: mediaImageUrl,
+          videoUrl: mediaVideoUrl,
           description: descriptionController.text.isEmpty
               ? null
               : descriptionController.text,
@@ -232,9 +303,11 @@ class CreatePostScreen extends HookConsumerWidget {
           Navigator.of(context).pop();
 
           // マスキング結果を通知
-          final message = uploadResult.masked && uploadResult.detectedCount > 0
-              ? '投稿が完了しました！（ナンバープレート ${uploadResult.detectedCount} 箇所を検出）'
-              : '投稿が完了しました！';
+          final message = isVideoMode.value
+              ? '動画投稿が完了しました！'
+              : (uploadedMasked && uploadedDetectedCount > 0
+                  ? '投稿が完了しました！（ナンバープレート $uploadedDetectedCount 箇所を検出）'
+                  : '投稿が完了しました！');
 
           ScaffoldMessenger.of(
             context,
@@ -288,7 +361,7 @@ class CreatePostScreen extends HookConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 画像プレビュー＆選択
+                  // メディアプレビュー＆選択（画像 or 動画）
                   GestureDetector(
                     onTap: () {
                       showModalBottomSheet(
@@ -298,7 +371,7 @@ class CreatePostScreen extends HookConsumerWidget {
                             children: [
                               ListTile(
                                 leading: const Icon(Icons.photo_camera),
-                                title: const Text('カメラで撮影'),
+                                title: const Text('カメラで撮影（画像）'),
                                 onTap: () {
                                   Navigator.pop(context);
                                   pickImage(ImageSource.camera);
@@ -306,10 +379,18 @@ class CreatePostScreen extends HookConsumerWidget {
                               ),
                               ListTile(
                                 leading: const Icon(Icons.photo_library),
-                                title: const Text('ギャラリーから選択'),
+                                title: const Text('ギャラリーから画像を選択'),
                                 onTap: () {
                                   Navigator.pop(context);
                                   pickImage(ImageSource.gallery);
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.videocam),
+                                title: const Text('ギャラリーから動画を選択'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  pickVideo();
                                 },
                               ),
                             ],
@@ -327,7 +408,46 @@ class CreatePostScreen extends HookConsumerWidget {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          if (imageBytes.value != null)
+                          if (isVideoMode.value &&
+                              selectedVideo.value != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: SizedBox.expand(
+                                child: Container(
+                                  color: Colors.black87,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.videocam,
+                                        size: 64,
+                                        color: Colors.white70,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        selectedVideo.value!.name,
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '${(videoBytes.value!.length / 1024 / 1024).toStringAsFixed(1)} MB',
+                                        style: const TextStyle(
+                                          color: Colors.white54,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            )
+                          else if (imageBytes.value != null)
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: SizedBox.expand(
@@ -349,7 +469,7 @@ class CreatePostScreen extends HookConsumerWidget {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'タップして画像を選択',
+                                  'タップして画像または動画を選択',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.grey[600],
@@ -362,8 +482,8 @@ class CreatePostScreen extends HookConsumerWidget {
                     ),
                   ),
 
-                  // マスキング調整ボタン
-                  if (imageBytes.value != null)
+                  // マスキング調整ボタン（画像選択時のみ表示）
+                  if (imageBytes.value != null && !isVideoMode.value)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: OutlinedButton.icon(
