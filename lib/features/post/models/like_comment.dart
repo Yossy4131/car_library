@@ -35,7 +35,11 @@ class Comment {
       postId: (json['post_id'] as num).toInt(),
       userId: json['user_id'] as String,
       body: json['body'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: _parseUtc(json['created_at'] as String),
     );
   }
+
+  /// UTC文字列をDateTime（ローカルタイム）に変換
+  static DateTime _parseUtc(String s) =>
+      DateTime.parse(s.contains('Z') || s.contains('+') ? s : '${s}Z');
 }

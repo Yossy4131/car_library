@@ -41,8 +41,8 @@ class Post {
       imageUrl: json['image_url'] as String,
       originalImageUrl: json['original_image_url'] as String?,
       description: json['description'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: _parseUtc(json['created_at'] as String),
+      updatedAt: _parseUtc(json['updated_at'] as String),
       likesCount: (json['likes_count'] as num?)?.toInt() ?? 0,
       commentsCount: (json['comments_count'] as num?)?.toInt() ?? 0,
       tags:
@@ -53,6 +53,11 @@ class Post {
           [],
     );
   }
+
+  /// UTC文字列をDateTime（ローカルタイム）に変換
+  /// SQLite の CURRENT_TIMESTAMP は 'YYYY-MM-DD HH:MM:SS' 形式でUTCを返すため、Zを付与してUTCとして解釈する
+  static DateTime _parseUtc(String s) =>
+      DateTime.parse(s.contains('Z') || s.contains('+') ? s : '${s}Z');
 
   /// PostオブジェクトをJSONに変換
   Map<String, dynamic> toJson() {
