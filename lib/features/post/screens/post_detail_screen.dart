@@ -94,7 +94,11 @@ class PostDetailScreen extends HookConsumerWidget {
                         errorBuilder: (_, __, ___) => const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.broken_image, size: 64, color: Colors.white38),
+                            Icon(
+                              Icons.broken_image,
+                              size: 64,
+                              color: Colors.white38,
+                            ),
                             SizedBox(height: 12),
                             Text(
                               '画像を読み込めませんでした',
@@ -240,17 +244,12 @@ class PostDetailScreen extends HookConsumerWidget {
                               runSpacing: 4,
                               children: post.tags
                                   .map(
-                                    (tag) => GestureDetector(
-                                      onTap: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Text(
-                                        '#$tag',
-                                        style: const TextStyle(
-                                          color: Color(0xFF90CAF9),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                    (tag) => Text(
+                                      '#$tag',
+                                      style: const TextStyle(
+                                        color: Color(0xFF90CAF9),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   )

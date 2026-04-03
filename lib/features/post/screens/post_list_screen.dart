@@ -6,7 +6,8 @@ import 'package:car_library/features/post/widgets/post_card.dart';
 import 'package:car_library/features/post/screens/create_post_screen.dart';
 import 'package:car_library/features/auth/providers/auth_provider.dart';
 import 'package:car_library/features/auth/screens/login_screen.dart';
-import 'package:car_library/features/mypage/screens/my_page_screen.dart';
+import 'package:car_library/features/mypage/screens/my_page_screen.dart'
+    show MyPageScreen;
 import 'package:car_library/features/car_master/providers/nhtsa_provider.dart';
 
 /// 投稿一覧画面

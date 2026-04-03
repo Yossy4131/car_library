@@ -8,6 +8,7 @@ import 'package:car_library/features/auth/providers/auth_provider.dart';
 import 'package:car_library/features/car_master/providers/nhtsa_provider.dart';
 import 'package:car_library/features/mypage/models/my_car.dart';
 import 'package:car_library/features/mypage/providers/my_car_provider.dart';
+import 'package:car_library/shared/widgets/vehicle_form_fields.dart';
 import 'package:intl/intl.dart';
 
 /// マイページ画面 — 自分の投稿一覧・削除・備考編集
@@ -168,34 +169,45 @@ class _MyPostCard extends HookConsumerWidget {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(4),
                 ),
-                child: Image.network(
-                  post.thumbnailUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Icon(
-                        Icons.broken_image,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-                  loadingBuilder: (_, child, progress) {
-                    if (progress == null) return child;
-                    return Container(
-                      color: Colors.grey[300],
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          value: progress.expectedTotalBytes != null
-                              ? progress.cumulativeBytesLoaded /
-                                    progress.expectedTotalBytes!
-                              : null,
+                child: post.isVideo
+                    ? Container(
+                        color: Colors.black87,
+                        child: const Center(
+                          child: Icon(
+                            Icons.play_circle_filled,
+                            size: 64,
+                            color: Colors.white70,
+                          ),
                         ),
+                      )
+                    : Image.network(
+                        post.thumbnailUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: Icon(
+                              Icons.broken_image,
+                              size: 64,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                        loadingBuilder: (_, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            color: Colors.grey[300],
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: progress.expectedTotalBytes != null
+                                    ? progress.cumulativeBytesLoaded /
+                                          progress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ),
           ),
@@ -465,7 +477,7 @@ class _EditPostDialog extends HookConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // メーカーオートコンプリート
-              _buildMakerField(
+              NhtsaMakerField(
                 nhtsaMakersAsync: nhtsaMakersAsync,
                 selectedMaker: selectedMaker,
                 selectedModel: selectedModel,
@@ -474,7 +486,7 @@ class _EditPostDialog extends HookConsumerWidget {
               ),
               const SizedBox(height: 16),
               // 車種名オートコンプリート
-              _buildModelField(
+              NhtsaModelField(
                 nhtsaModelsAsync: nhtsaModelsAsync,
                 selectedMaker: selectedMaker,
                 selectedModel: selectedModel,
@@ -503,7 +515,7 @@ class _EditPostDialog extends HookConsumerWidget {
               ),
               const SizedBox(height: 16),
               // タグ入力
-              _TagEditField(
+              TagInputField(
                 controller: tagInputController,
                 tags: tags.value,
                 onAddTag: (tag) {
@@ -549,287 +561,6 @@ class _EditPostDialog extends HookConsumerWidget {
           },
           child: const Text('保存'),
         ),
-      ],
-    );
-  }
-}
-
-// メーカー選択フィールド
-Widget _buildMakerField({
-  required AsyncValue<List<String>> nhtsaMakersAsync,
-  required ValueNotifier<String?> selectedMaker,
-  required ValueNotifier<String?> selectedModel,
-  required ValueNotifier<String> makerFreeText,
-  required ValueNotifier<String> modelFreeText,
-}) {
-  return nhtsaMakersAsync.when(
-    loading: () => const TextField(
-      decoration: InputDecoration(
-        labelText: 'メーカー *',
-        hintText: 'メーカー一覧を読み込み中...',
-        border: OutlineInputBorder(),
-        suffixIcon: Padding(
-          padding: EdgeInsets.all(12.0),
-          child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      ),
-      enabled: false,
-    ),
-    error: (e, _) => TextField(
-      decoration: const InputDecoration(
-        labelText: 'メーカー *',
-        hintText: '例: TOYOTA, HONDA（手動入力）',
-        border: OutlineInputBorder(),
-        helperText: 'APIが利用できません。直接入力してください',
-      ),
-      onChanged: (v) {
-        makerFreeText.value = v;
-        selectedMaker.value = null;
-        selectedModel.value = null;
-        modelFreeText.value = '';
-      },
-    ),
-    data: (makers) => Autocomplete<String>(
-      initialValue: TextEditingValue(text: makerFreeText.value),
-      optionsBuilder: (textEditingValue) {
-        final query = textEditingValue.text.trim();
-        if (query.isEmpty) return const Iterable<String>.empty();
-        final lower = query.toLowerCase();
-        return makers.where((m) => m.toLowerCase().contains(lower)).take(10);
-      },
-      onSelected: (value) {
-        selectedMaker.value = value;
-        makerFreeText.value = value;
-        selectedModel.value = null;
-        modelFreeText.value = '';
-      },
-      fieldViewBuilder: (ctx, controller, focusNode, onSubmit) {
-        return TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          decoration: const InputDecoration(
-            labelText: 'メーカー *',
-            hintText: 'メーカー名を入力して検索',
-            border: OutlineInputBorder(),
-            helperText: '例: TOYOTA, HONDA, NISSAN',
-          ),
-          onChanged: (v) {
-            makerFreeText.value = v;
-            if (selectedMaker.value != null && v != selectedMaker.value) {
-              selectedMaker.value = null;
-              selectedModel.value = null;
-              modelFreeText.value = '';
-            }
-          },
-        );
-      },
-      optionsViewBuilder: (ctx, onSelected, options) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(8),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 200),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (ctx, index) {
-                  final option = options.elementAt(index);
-                  return ListTile(
-                    dense: true,
-                    title: Text(option),
-                    onTap: () => onSelected(option),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
-
-// 車種名選択フィールド
-Widget _buildModelField({
-  required AsyncValue<List<String>> nhtsaModelsAsync,
-  required ValueNotifier<String?> selectedMaker,
-  required ValueNotifier<String?> selectedModel,
-  required ValueNotifier<String> modelFreeText,
-}) {
-  final hasMaker =
-      selectedMaker.value != null && selectedMaker.value!.isNotEmpty;
-
-  if (!hasMaker) {
-    return const TextField(
-      decoration: InputDecoration(
-        labelText: '車種名 *',
-        hintText: '先にメーカーを選択してください',
-        border: OutlineInputBorder(),
-      ),
-      enabled: false,
-    );
-  }
-
-  return nhtsaModelsAsync.when(
-    loading: () => const TextField(
-      decoration: InputDecoration(
-        labelText: '車種名 *',
-        hintText: '車種一覧を読み込み中...',
-        border: OutlineInputBorder(),
-        suffixIcon: Padding(
-          padding: EdgeInsets.all(12.0),
-          child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      ),
-      enabled: false,
-    ),
-    error: (e, _) => TextField(
-      decoration: const InputDecoration(
-        labelText: '車種名 *',
-        hintText: '例: Corolla, Civic（手動入力）',
-        border: OutlineInputBorder(),
-        helperText: 'APIが利用できません。直接入力してください',
-      ),
-      onChanged: (v) {
-        modelFreeText.value = v;
-        selectedModel.value = null;
-      },
-    ),
-    data: (models) => Autocomplete<String>(
-      key: ValueKey(selectedMaker.value),
-      initialValue: TextEditingValue(text: modelFreeText.value),
-      optionsBuilder: (textEditingValue) {
-        final query = textEditingValue.text.trim();
-        if (query.isEmpty) return models.take(10);
-        final lower = query.toLowerCase();
-        return models.where((m) => m.toLowerCase().contains(lower)).take(10);
-      },
-      onSelected: (value) {
-        selectedModel.value = value;
-        modelFreeText.value = value;
-      },
-      fieldViewBuilder: (ctx, controller, focusNode, onSubmit) {
-        return TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          decoration: const InputDecoration(
-            labelText: '車種名 *',
-            hintText: '車種名を入力して検索',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (v) {
-            modelFreeText.value = v;
-            if (selectedModel.value != null && v != selectedModel.value) {
-              selectedModel.value = null;
-            }
-          },
-        );
-      },
-      optionsViewBuilder: (ctx, onSelected, options) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(8),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 200),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (ctx, index) {
-                  final option = options.elementAt(index);
-                  return ListTile(
-                    dense: true,
-                    title: Text(option),
-                    onTap: () => onSelected(option),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
-
-// ────────────────────────────────────────────────────
-// マイページ用タグ編集フィールド
-// ────────────────────────────────────────────────────
-
-class _TagEditField extends StatelessWidget {
-  final TextEditingController controller;
-  final List<String> tags;
-  final void Function(String tag) onAddTag;
-  final void Function(String tag) onRemoveTag;
-
-  const _TagEditField({
-    required this.controller,
-    required this.tags,
-    required this.onAddTag,
-    required this.onRemoveTag,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: 'ハッシュタグ',
-            hintText: '例: スポーツカー（最大10個）',
-            border: const OutlineInputBorder(),
-            helperText: '入力してEnterで追加。# は自動で付きます。',
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                final v = controller.text.trim();
-                if (v.isNotEmpty) onAddTag(v);
-              },
-            ),
-          ),
-          onSubmitted: (v) {
-            if (v.trim().isNotEmpty) onAddTag(v.trim());
-          },
-          onChanged: (v) {
-            if (v.endsWith(' ') || v.endsWith('　')) {
-              final trimmed = v.trim();
-              if (trimmed.isNotEmpty) onAddTag(trimmed);
-            }
-          },
-        ),
-        if (tags.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: tags
-                .map(
-                  (tag) => Chip(
-                    label: Text('#$tag'),
-                    deleteIcon: const Icon(Icons.close, size: 14),
-                    onDeleted: () => onRemoveTag(tag),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                )
-                .toList(),
-          ),
-        ],
       ],
     );
   }
@@ -984,7 +715,7 @@ class _MyCarEditDialog extends HookConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildMakerField(
+              NhtsaMakerField(
                 nhtsaMakersAsync: nhtsaMakersAsync,
                 selectedMaker: selectedMaker,
                 selectedModel: selectedModel,
@@ -992,7 +723,7 @@ class _MyCarEditDialog extends HookConsumerWidget {
                 modelFreeText: modelFreeText,
               ),
               const SizedBox(height: 16),
-              _buildModelField(
+              NhtsaModelField(
                 nhtsaModelsAsync: nhtsaModelsAsync,
                 selectedMaker: selectedMaker,
                 selectedModel: selectedModel,
@@ -1045,3 +776,5 @@ class _MyCarEditDialog extends HookConsumerWidget {
     );
   }
 }
+
+// メーカー選択フィールド

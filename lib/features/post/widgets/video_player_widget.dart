@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:video_player/video_player.dart';
 
+String _formatDuration(Duration d) {
+  final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$m:$s';
+}
+
 /// ネットワーク動画を再生するウィジェット（Flutter Web / Mobile 対応）
 class VideoPlayerWidget extends HookWidget {
   final String url;
@@ -64,12 +70,6 @@ class VideoPlayerWidget extends HookWidget {
 
     final totalSeconds = duration.value.inSeconds;
     final currentSeconds = position.value.inSeconds.clamp(0, totalSeconds);
-
-    String _formatDuration(Duration d) {
-      final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-      final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-      return '$m:$s';
-    }
 
     return Column(
       mainAxisSize: MainAxisSize.max,
@@ -144,18 +144,14 @@ class VideoPlayerWidget extends HookWidget {
               // シークバー
               Expanded(
                 child: Slider(
-                  value: totalSeconds > 0
-                      ? currentSeconds.toDouble()
-                      : 0.0,
+                  value: totalSeconds > 0 ? currentSeconds.toDouble() : 0.0,
                   min: 0.0,
                   max: totalSeconds > 0 ? totalSeconds.toDouble() : 1.0,
                   activeColor: Colors.white,
                   inactiveColor: Colors.white30,
                   onChanged: totalSeconds > 0
                       ? (value) {
-                          controller.seekTo(
-                            Duration(seconds: value.toInt()),
-                          );
+                          controller.seekTo(Duration(seconds: value.toInt()));
                         }
                       : null,
                 ),
@@ -174,4 +170,3 @@ class VideoPlayerWidget extends HookWidget {
     );
   }
 }
-

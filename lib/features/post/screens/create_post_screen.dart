@@ -11,7 +11,7 @@ import 'package:car_library/features/car_master/providers/nhtsa_provider.dart';
 import 'package:car_library/features/mypage/providers/my_car_provider.dart';
 import 'package:car_library/shared/services/api_service.dart';
 import 'package:car_library/shared/providers/api_service_provider.dart';
-import 'package:car_library/features/post/widgets/video_player_widget.dart';
+import 'package:car_library/shared/widgets/vehicle_form_fields.dart';
 
 /// 新規投稿作成画面
 class CreatePostScreen extends HookConsumerWidget {
@@ -69,9 +69,9 @@ class CreatePostScreen extends HookConsumerWidget {
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('動画の選択に失敗しました: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('動画の選択に失敗しました: $e')));
         }
       }
     }
@@ -144,49 +144,47 @@ class CreatePostScreen extends HookConsumerWidget {
           // 新しい画像を選択したら、前のマスキング領域をクリア
           maskingRects.value = [];
 
-          // マスキング有効時はAI検出を実行してから、プレビュー画面を開く
-          if (true) {
-            try {
-              isDetecting.value = true;
-              final apiService = ref.read(apiServiceProvider);
-              // AI検出を実行
-              final detectedBoxes = await apiService.detectLicensePlates(
-                bytes,
-                image.name,
+          // AI検出を実行してからプレビュー画面を開く
+          try {
+            isDetecting.value = true;
+            final apiService = ref.read(apiServiceProvider);
+            // AI検出を実行
+            final detectedBoxes = await apiService.detectLicensePlates(
+              bytes,
+              image.name,
+            );
+
+            // 検出結果をピクセル座標として保存
+            maskingRects.value = detectedBoxes
+                .map(
+                  (box) => MaskingRect(
+                    x: box.x,
+                    y: box.y,
+                    width: box.width,
+                    height: box.height,
+                  ),
+                )
+                .toList();
+
+            isDetecting.value = false;
+            if (context.mounted) {
+              // 検出結果を表示
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${detectedBoxes.length}個の領域を検出しました'),
+                  duration: const Duration(seconds: 2),
+                ),
               );
 
-              // 検出結果をピクセル座標として保存
-              maskingRects.value = detectedBoxes
-                  .map(
-                    (box) => MaskingRect(
-                      x: box.x,
-                      y: box.y,
-                      width: box.width,
-                      height: box.height,
-                    ),
-                  )
-                  .toList();
-
-              isDetecting.value = false;
-              if (context.mounted) {
-                // 検出結果を表示
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${detectedBoxes.length}個の領域を検出しました'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-
-                // プレビュー画面を開く
-                await openMaskingPreview();
-              }
-            } catch (e) {
-              isDetecting.value = false;
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('AI検出に失敗しました: $e')));
-              }
+              // プレビュー画面を開く
+              await openMaskingPreview();
+            }
+          } catch (e) {
+            isDetecting.value = false;
+            if (context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('AI検出に失敗しました: $e')));
             }
           }
         }
@@ -276,8 +274,6 @@ class CreatePostScreen extends HookConsumerWidget {
         }
 
         // 2. 投稿を作成
-        final maker = (selectedMaker.value ?? makerFreeText.value).trim();
-        final model = (selectedModel.value ?? modelFreeText.value).trim();
         final request = CreatePostRequest(
           userId: authState.userId!,
           carMaker: maker,
@@ -306,8 +302,8 @@ class CreatePostScreen extends HookConsumerWidget {
           final message = isVideoMode.value
               ? '動画投稿が完了しました！'
               : (uploadedMasked && uploadedDetectedCount > 0
-                  ? '投稿が完了しました！（ナンバープレート $uploadedDetectedCount 箇所を検出）'
-                  : '投稿が完了しました！');
+                    ? '投稿が完了しました！（ナンバープレート $uploadedDetectedCount 箇所を検出）'
+                    : '投稿が完了しました！');
 
           ScaffoldMessenger.of(
             context,
@@ -408,8 +404,7 @@ class CreatePostScreen extends HookConsumerWidget {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          if (isVideoMode.value &&
-                              selectedVideo.value != null)
+                          if (isVideoMode.value && selectedVideo.value != null)
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: SizedBox.expand(
@@ -498,26 +493,26 @@ class CreatePostScreen extends HookConsumerWidget {
                   const SizedBox(height: 24),
 
                   // メーカー選択（NHTSA Autocomplete）
-                  _buildMakerField(
+                  NhtsaMakerField(
                     nhtsaMakersAsync: nhtsaMakersAsync,
                     selectedMaker: selectedMaker,
                     selectedModel: selectedModel,
                     makerFreeText: makerFreeText,
                     modelFreeText: modelFreeText,
-                    isUploading: isUploading.value,
-                    initialMaker: myCar.maker,
+                    enabled: !isUploading.value,
+                    initialValue: myCar.maker,
                   ),
 
                   const SizedBox(height: 16),
 
                   // 車種名選択（NHTSA Autocomplete）
-                  _buildModelField(
+                  NhtsaModelField(
                     nhtsaModelsAsync: nhtsaModelsAsync,
                     selectedMaker: selectedMaker,
                     selectedModel: selectedModel,
                     modelFreeText: modelFreeText,
-                    isUploading: isUploading.value,
-                    initialModel: myCar.model,
+                    enabled: !isUploading.value,
+                    initialValue: myCar.model,
                   ),
 
                   const SizedBox(height: 16),
@@ -550,7 +545,7 @@ class CreatePostScreen extends HookConsumerWidget {
                   const SizedBox(height: 16),
 
                   // タグ入力
-                  _TagInputField(
+                  TagInputField(
                     controller: tagInputController,
                     tags: tags.value,
                     enabled: !isUploading.value,
@@ -570,8 +565,6 @@ class CreatePostScreen extends HookConsumerWidget {
                       tags.value = tags.value.where((t) => t != tag).toList();
                     },
                   ),
-
-                  const SizedBox(height: 16),
 
                   const SizedBox(height: 24),
 
@@ -613,308 +606,6 @@ class CreatePostScreen extends HookConsumerWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-// ────────────────────────────────────────────────────
-// メーカー選択フィールド（NHTSA Autocomplete）
-// ────────────────────────────────────────────────────
-
-Widget _buildMakerField({
-  required AsyncValue<List<String>> nhtsaMakersAsync,
-  required ValueNotifier<String?> selectedMaker,
-  required ValueNotifier<String?> selectedModel,
-  required ValueNotifier<String> makerFreeText,
-  required ValueNotifier<String> modelFreeText,
-  required bool isUploading,
-  String? initialMaker,
-}) {
-  return nhtsaMakersAsync.when(
-    loading: () => const TextField(
-      decoration: InputDecoration(
-        labelText: 'メーカー *',
-        hintText: 'メーカー一覧を読み込み中...',
-        border: OutlineInputBorder(),
-        suffixIcon: Padding(
-          padding: EdgeInsets.all(12.0),
-          child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      ),
-      enabled: false,
-    ),
-    error: (_, _) => TextField(
-      decoration: const InputDecoration(
-        labelText: 'メーカー *',
-        hintText: '例: TOYOTA, HONDA（手動入力）',
-        border: OutlineInputBorder(),
-        helperText: 'APIが利用できません。直接入力してください',
-      ),
-      onChanged: (v) {
-        makerFreeText.value = v;
-        selectedMaker.value = null;
-        selectedModel.value = null;
-        modelFreeText.value = '';
-      },
-      enabled: !isUploading,
-    ),
-    data: (makers) => Autocomplete<String>(
-      initialValue: TextEditingValue(text: initialMaker ?? makerFreeText.value),
-      optionsBuilder: (textEditingValue) {
-        final query = textEditingValue.text.trim();
-        if (query.isEmpty) return const Iterable<String>.empty();
-        final lower = query.toLowerCase();
-        return makers.where((m) => m.toLowerCase().contains(lower)).take(10);
-      },
-      onSelected: (value) {
-        selectedMaker.value = value;
-        makerFreeText.value = value;
-        // メーカー変更時はモデル選択をリセット
-        selectedModel.value = null;
-        modelFreeText.value = '';
-      },
-      fieldViewBuilder: (ctx, controller, focusNode, onSubmit) {
-        return TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          decoration: const InputDecoration(
-            labelText: 'メーカー *',
-            hintText: 'メーカー名を入力して検索',
-            border: OutlineInputBorder(),
-            helperText: '例: TOYOTA, HONDA, NISSAN',
-          ),
-          enabled: !isUploading,
-          onChanged: (v) {
-            makerFreeText.value = v;
-            // ドロップダウン選択後に手動編集した場合は選択を無効化
-            if (selectedMaker.value != null && v != selectedMaker.value) {
-              selectedMaker.value = null;
-              selectedModel.value = null;
-              modelFreeText.value = '';
-            }
-          },
-        );
-      },
-      optionsViewBuilder: (ctx, onSelected, options) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(8),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 200),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (ctx, index) {
-                  final option = options.elementAt(index);
-                  return ListTile(
-                    dense: true,
-                    title: Text(option),
-                    onTap: () => onSelected(option),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
-
-// ────────────────────────────────────────────────────
-// 車種名選択フィールド（NHTSA Autocomplete）
-// ────────────────────────────────────────────────────
-
-Widget _buildModelField({
-  required AsyncValue<List<String>> nhtsaModelsAsync,
-  required ValueNotifier<String?> selectedMaker,
-  required ValueNotifier<String?> selectedModel,
-  required ValueNotifier<String> modelFreeText,
-  required bool isUploading,
-  String? initialModel,
-}) {
-  final hasMaker =
-      selectedMaker.value != null && selectedMaker.value!.isNotEmpty;
-
-  if (!hasMaker) {
-    return const TextField(
-      decoration: InputDecoration(
-        labelText: '車種名 *',
-        hintText: '先にメーカーを選択してください',
-        border: OutlineInputBorder(),
-      ),
-      enabled: false,
-    );
-  }
-
-  return nhtsaModelsAsync.when(
-    loading: () => const TextField(
-      decoration: InputDecoration(
-        labelText: '車種名 *',
-        hintText: '車種一覧を読み込み中...',
-        border: OutlineInputBorder(),
-        suffixIcon: Padding(
-          padding: EdgeInsets.all(12.0),
-          child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      ),
-      enabled: false,
-    ),
-    error: (_, _) => TextField(
-      decoration: const InputDecoration(
-        labelText: '車種名 *',
-        hintText: '例: Corolla, Civic（手動入力）',
-        border: OutlineInputBorder(),
-        helperText: 'APIが利用できません。直接入力してください',
-      ),
-      onChanged: (v) {
-        modelFreeText.value = v;
-        selectedModel.value = null;
-      },
-      enabled: !isUploading,
-    ),
-    data: (models) => Autocomplete<String>(
-      key: ValueKey(selectedMaker.value), // メーカー変更でウィジェットをリセット
-      initialValue: TextEditingValue(text: initialModel ?? modelFreeText.value),
-      optionsBuilder: (textEditingValue) {
-        final query = textEditingValue.text.trim();
-        if (query.isEmpty) return models.take(10);
-        final lower = query.toLowerCase();
-        return models.where((m) => m.toLowerCase().contains(lower)).take(10);
-      },
-      onSelected: (value) {
-        selectedModel.value = value;
-        modelFreeText.value = value;
-      },
-      fieldViewBuilder: (ctx, controller, focusNode, onSubmit) {
-        return TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          decoration: const InputDecoration(
-            labelText: '車種名 *',
-            hintText: '車種名を入力して検索',
-            border: OutlineInputBorder(),
-          ),
-          enabled: !isUploading,
-          onChanged: (v) {
-            modelFreeText.value = v;
-            if (selectedModel.value != null && v != selectedModel.value) {
-              selectedModel.value = null;
-            }
-          },
-        );
-      },
-      optionsViewBuilder: (ctx, onSelected, options) {
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(8),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 200),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                itemCount: options.length,
-                itemBuilder: (ctx, index) {
-                  final option = options.elementAt(index);
-                  return ListTile(
-                    dense: true,
-                    title: Text(option),
-                    onTap: () => onSelected(option),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
-
-// ────────────────────────────────────────────────────
-// タグ入力フィールド
-// ────────────────────────────────────────────────────
-
-class _TagInputField extends StatelessWidget {
-  final TextEditingController controller;
-  final List<String> tags;
-  final bool enabled;
-  final void Function(String tag) onAddTag;
-  final void Function(String tag) onRemoveTag;
-
-  const _TagInputField({
-    required this.controller,
-    required this.tags,
-    required this.enabled,
-    required this.onAddTag,
-    required this.onRemoveTag,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: controller,
-          enabled: enabled,
-          decoration: InputDecoration(
-            labelText: 'ハッシュタグ',
-            hintText: '例: スポーツカー（最大10個）',
-            border: const OutlineInputBorder(),
-            helperText: '入力してEnterで追加。# は自動で付きます。',
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: enabled
-                  ? () {
-                      final v = controller.text.trim();
-                      if (v.isNotEmpty) onAddTag(v);
-                    }
-                  : null,
-            ),
-          ),
-          onSubmitted: (v) {
-            if (v.trim().isNotEmpty) onAddTag(v.trim());
-          },
-          onChanged: (v) {
-            if (v.endsWith(' ') || v.endsWith('　')) {
-              final trimmed = v.trim();
-              if (trimmed.isNotEmpty) onAddTag(trimmed);
-            }
-          },
-        ),
-        if (tags.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: tags
-                .map(
-                  (tag) => Chip(
-                    label: Text('#$tag'),
-                    deleteIcon: const Icon(Icons.close, size: 14),
-                    onDeleted: () => onRemoveTag(tag),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                )
-                .toList(),
-          ),
-        ],
-      ],
     );
   }
 }
