@@ -8,6 +8,7 @@ import 'package:car_library/features/post/models/post.dart';
 import 'package:car_library/features/post/screens/masking_preview_screen.dart';
 import 'package:car_library/features/auth/providers/auth_provider.dart';
 import 'package:car_library/features/car_master/providers/nhtsa_provider.dart';
+import 'package:car_library/features/mypage/providers/my_car_provider.dart';
 import 'package:car_library/shared/services/api_service.dart';
 import 'package:car_library/shared/providers/api_service_provider.dart';
 
@@ -35,6 +36,21 @@ class CreatePostScreen extends HookConsumerWidget {
     final tags = useState<List<String>>([]);
     final maskingRects = useState<List<MaskingRect>>([]);
     final isDetecting = useState(false);
+
+    // マイカー情報で初期値をセット（初回マウント時のみ）
+    final myCar = ref.read(myCarProvider);
+    useEffect(() {
+      if (myCar.hasData) {
+        selectedMaker.value = myCar.maker;
+        makerFreeText.value = myCar.maker ?? '';
+        selectedModel.value = myCar.model;
+        modelFreeText.value = myCar.model ?? '';
+        if (myCar.variant != null && myCar.variant!.isNotEmpty) {
+          variantController.text = myCar.variant!;
+        }
+      }
+      return null;
+    }, const []);
 
     // NHTSA プロバイダー
     final nhtsaMakersAsync = ref.watch(nhtsaMakersProvider);
@@ -369,6 +385,7 @@ class CreatePostScreen extends HookConsumerWidget {
                     makerFreeText: makerFreeText,
                     modelFreeText: modelFreeText,
                     isUploading: isUploading.value,
+                    initialMaker: myCar.maker,
                   ),
 
                   const SizedBox(height: 16),
@@ -380,6 +397,7 @@ class CreatePostScreen extends HookConsumerWidget {
                     selectedModel: selectedModel,
                     modelFreeText: modelFreeText,
                     isUploading: isUploading.value,
+                    initialModel: myCar.model,
                   ),
 
                   const SizedBox(height: 16),
@@ -490,6 +508,7 @@ Widget _buildMakerField({
   required ValueNotifier<String> makerFreeText,
   required ValueNotifier<String> modelFreeText,
   required bool isUploading,
+  String? initialMaker,
 }) {
   return nhtsaMakersAsync.when(
     loading: () => const TextField(
@@ -524,6 +543,7 @@ Widget _buildMakerField({
       enabled: !isUploading,
     ),
     data: (makers) => Autocomplete<String>(
+      initialValue: TextEditingValue(text: initialMaker ?? makerFreeText.value),
       optionsBuilder: (textEditingValue) {
         final query = textEditingValue.text.trim();
         if (query.isEmpty) return const Iterable<String>.empty();
@@ -598,6 +618,7 @@ Widget _buildModelField({
   required ValueNotifier<String?> selectedModel,
   required ValueNotifier<String> modelFreeText,
   required bool isUploading,
+  String? initialModel,
 }) {
   final hasMaker =
       selectedMaker.value != null && selectedMaker.value!.isNotEmpty;
@@ -645,6 +666,7 @@ Widget _buildModelField({
     ),
     data: (models) => Autocomplete<String>(
       key: ValueKey(selectedMaker.value), // メーカー変更でウィジェットをリセット
+      initialValue: TextEditingValue(text: initialModel ?? modelFreeText.value),
       optionsBuilder: (textEditingValue) {
         final query = textEditingValue.text.trim();
         if (query.isEmpty) return models.take(10);

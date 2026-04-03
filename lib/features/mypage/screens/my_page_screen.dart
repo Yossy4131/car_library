@@ -6,6 +6,8 @@ import 'package:car_library/features/post/providers/post_provider.dart';
 import 'package:car_library/features/post/screens/post_detail_screen.dart';
 import 'package:car_library/features/auth/providers/auth_provider.dart';
 import 'package:car_library/features/car_master/providers/nhtsa_provider.dart';
+import 'package:car_library/features/mypage/models/my_car.dart';
+import 'package:car_library/features/mypage/providers/my_car_provider.dart';
 import 'package:intl/intl.dart';
 
 /// マイページ画面 — 自分の投稿一覧・削除・備考編集
@@ -24,95 +26,112 @@ class MyPageScreen extends HookConsumerWidget {
         ),
         elevation: 2,
       ),
-      body: myPostsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('エラーが発生しました', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => ref.invalidate(myPostsProvider),
-                icon: const Icon(Icons.refresh),
-                label: const Text('再読み込み'),
-              ),
-            ],
-          ),
-        ),
-        data: (posts) {
-          if (posts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.directions_car,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'まだ投稿がありません',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('写真を投稿して車を紹介しましょう！'),
-                ],
-              ),
-            );
-          }
-
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final int crossAxisCount = width < 600
-                  ? 1
-                  : width < 1200
-                  ? 2
-                  : 3;
-              const double spacing = 8.0;
-
-              if (crossAxisCount == 1) {
-                return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(myPostsProvider),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(spacing),
-                    itemCount: posts.length,
-                    itemBuilder: (_, index) => _MyPostCard(post: posts[index]),
-                  ),
-                );
-              }
-
-              final itemWidth =
-                  (width - spacing * (crossAxisCount + 1)) / crossAxisCount;
-              final mainAxisExtent = itemWidth * 9 / 16 + 200;
-
-              return RefreshIndicator(
-                onRefresh: () async => ref.invalidate(myPostsProvider),
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(spacing),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: spacing,
-                    mainAxisSpacing: spacing,
-                    mainAxisExtent: mainAxisExtent,
-                  ),
-                  itemCount: posts.length,
-                  itemBuilder: (_, index) => _MyPostCard(post: posts[index]),
+      body: Column(
+        children: [
+          const _MyCarSection(),
+          Expanded(
+            child: myPostsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'エラーが発生しました',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => ref.invalidate(myPostsProvider),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('再読み込み'),
+                    ),
+                  ],
                 ),
-              );
-            },
-          );
-        },
+              ),
+              data: (posts) {
+                if (posts.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.directions_car,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'まだ投稿がありません',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('写真を投稿して車を紹介しましょう！'),
+                      ],
+                    ),
+                  );
+                }
+
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    final int crossAxisCount = width < 600
+                        ? 1
+                        : width < 1200
+                        ? 2
+                        : 3;
+                    const double spacing = 8.0;
+
+                    if (crossAxisCount == 1) {
+                      return RefreshIndicator(
+                        onRefresh: () async => ref.invalidate(myPostsProvider),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(spacing),
+                          itemCount: posts.length,
+                          itemBuilder: (_, index) =>
+                              _MyPostCard(post: posts[index]),
+                        ),
+                      );
+                    }
+
+                    final itemWidth =
+                        (width - spacing * (crossAxisCount + 1)) /
+                        crossAxisCount;
+                    final mainAxisExtent = itemWidth * 9 / 16 + 200;
+
+                    return RefreshIndicator(
+                      onRefresh: () async => ref.invalidate(myPostsProvider),
+                      child: GridView.builder(
+                        padding: const EdgeInsets.all(spacing),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: spacing,
+                          mainAxisSpacing: spacing,
+                          mainAxisExtent: mainAxisExtent,
+                        ),
+                        itemCount: posts.length,
+                        itemBuilder: (_, index) =>
+                            _MyPostCard(post: posts[index]),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -811,6 +830,217 @@ class _TagEditField extends StatelessWidget {
                 .toList(),
           ),
         ],
+      ],
+    );
+  }
+}
+
+// ============================================================
+// マイカーセクション
+// ============================================================
+
+class _MyCarSection extends HookConsumerWidget {
+  const _MyCarSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myCar = ref.watch(myCarProvider);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: myCar.hasData
+            ? Row(
+                children: [
+                  const Icon(Icons.directions_car, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'マイカー',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        Text(
+                          [
+                            myCar.maker ?? '',
+                            myCar.model ?? '',
+                            if (myCar.variant != null &&
+                                myCar.variant!.isNotEmpty)
+                              myCar.variant!,
+                          ].join(' '),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _openEditDialog(context, ref, myCar),
+                    child: const Text('編集'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    tooltip: 'マイカーを削除',
+                    onPressed: () async {
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('マイカーを削除'),
+                          content: const Text('登録したマイカー情報を削除しますか？'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('キャンセル'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.red,
+                              ),
+                              child: const Text('削除'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (ok == true) {
+                        await ref.read(myCarProvider.notifier).clear();
+                      }
+                    },
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  const Icon(
+                    Icons.directions_car_outlined,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'マイカーを登録すると投稿時に自動入力されます',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        _openEditDialog(context, ref, const MyCar()),
+                    child: const Text('登録する'),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  void _openEditDialog(BuildContext context, WidgetRef ref, MyCar current) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _MyCarEditDialog(current: current),
+    );
+  }
+}
+
+// ============================================================
+// マイカー編集ダイアログ
+// ============================================================
+
+class _MyCarEditDialog extends HookConsumerWidget {
+  final MyCar current;
+  const _MyCarEditDialog({required this.current});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedMaker = useState<String?>(current.maker);
+    final selectedModel = useState<String?>(current.model);
+    final makerFreeText = useState<String>(current.maker ?? '');
+    final modelFreeText = useState<String>(current.model ?? '');
+    final variantController = useTextEditingController(
+      text: current.variant ?? '',
+    );
+
+    final nhtsaMakersAsync = ref.watch(nhtsaMakersProvider);
+    final nhtsaModelsAsync =
+        selectedMaker.value != null && selectedMaker.value!.isNotEmpty
+        ? ref.watch(nhtsaModelsProvider(selectedMaker.value!))
+        : const AsyncValue<List<String>>.data([]);
+
+    return AlertDialog(
+      title: const Text('マイカー登録'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildMakerField(
+                nhtsaMakersAsync: nhtsaMakersAsync,
+                selectedMaker: selectedMaker,
+                selectedModel: selectedModel,
+                makerFreeText: makerFreeText,
+                modelFreeText: modelFreeText,
+              ),
+              const SizedBox(height: 16),
+              _buildModelField(
+                nhtsaModelsAsync: nhtsaModelsAsync,
+                selectedMaker: selectedMaker,
+                selectedModel: selectedModel,
+                modelFreeText: modelFreeText,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: variantController,
+                decoration: const InputDecoration(
+                  labelText: '型式（任意）',
+                  hintText: '例: ZVW50、FK7',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('キャンセル'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final maker = (selectedMaker.value ?? makerFreeText.value).trim();
+            final model = (selectedModel.value ?? modelFreeText.value).trim();
+            if (maker.isEmpty || model.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('メーカーと車種名を入力してください')),
+              );
+              return;
+            }
+            await ref
+                .read(myCarProvider.notifier)
+                .save(
+                  MyCar(
+                    maker: maker,
+                    model: model,
+                    variant: variantController.text.trim().isEmpty
+                        ? null
+                        : variantController.text.trim(),
+                  ),
+                );
+            if (context.mounted) Navigator.pop(context);
+          },
+          child: const Text('保存'),
+        ),
       ],
     );
   }

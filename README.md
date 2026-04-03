@@ -83,8 +83,7 @@ npm run dev
 **Flutter アプリ（ターミナル 2）:**
 
 ```bash
-flutter run -d chrome --web-browser-flag="--disable-web-security" \
-  --dart-define=API_BASE_URL=http://127.0.0.1:8787
+flutter run -d chrome --web-browser-flag="--disable-web-security" --dart-define=API_BASE_URL=http://127.0.0.1:8787
 ```
 
 > `--dart-define=API_BASE_URL=...` でAPIのURLを注入します。省略時は本番URL（`https://car-library-api.y-yoshida1031.workers.dev`）にフォールバックします。
