@@ -11,10 +11,10 @@
 │  hooks_riverpod     │      JSON           │   src/index.ts               │
 │  flutter_hooks      │                     └──────┬──────────┬────────────┘
 └─────────────────────┘                            │          │
-                                              ┌────▼───┐  ┌──▼──────┐
-                                              │  D1    │  │   R2    │
-                                              │ SQLite │  │ Images  │
-                                              └────────┘  └──┬──────┘
+                                              ┌────▼───┐  ┌──▼────────────┐
+                                              │  D1    │  │      R2       │
+                                              │ SQLite │  │ Images/Videos │
+                                              └────────┘  └──┬────────────┘
                                                              │
                                                        ┌─────▼──────┐
                                                        │ Workers AI │
@@ -64,20 +64,26 @@ lib/
 │   │       └── register_screen.dart
 │   ├── post/
 │   │   ├── models/
-│   │   │   ├── post.dart            # Post / CreatePostRequest
+│   │   │   ├── post.dart            # Post / CreatePostRequest（videoUrl 対応済み）
 │   │   │   └── like_comment.dart    # LikeStatus / Comment
 │   │   ├── providers/
 │   │   │   ├── post_provider.dart   # postsProvider / myPostsProvider / PostController
 │   │   │   └── like_comment_provider.dart  # likeNotifierProvider / commentsProvider
 │   │   ├── screens/
 │   │   │   ├── post_list_screen.dart   # 一覧・検索
-│   │   │   ├── post_detail_screen.dart # 詳細・いいね・コメント
-│   │   │   └── create_post_screen.dart # 投稿作成・タグ入力
+│   │   │   ├── post_detail_screen.dart # 詳細・いいね・コメント（動画プレイヤー対応）
+│   │   │   ├── create_post_screen.dart # 投稿作成（画像/動画選択・タグ入力）
+│   │   │   └── masking_preview_screen.dart
 │   │   └── widgets/
-│   │       └── post_card.dart       # ConsumerWidget（戻り時にinvalidate）
+│   │       ├── post_card.dart       # ConsumerWidget（動画インジケーター付き）
+│   │       └── video_player_widget.dart  # HookWidget（シークバー・再生時間表示）
 │   ├── mypage/
+│   │   ├── models/
+│   │   │   └── my_car.dart          # MyCar（メーカー/車種/型式）
+│   │   ├── providers/
+│   │   │   └── my_car_provider.dart # MyCarNotifier（SharedPreferences）
 │   │   └── screens/
-│   │       └── my_page_screen.dart  # 自分の投稿一覧・編集・削除
+│   │       └── my_page_screen.dart  # 自分の投稿一覧・編集・削除・マイカー登録
 │   └── car_master/
 │       └── providers/
 │           └── nhtsa_provider.dart  # nhtsaMakersProvider / nhtsaModelsProvider
@@ -85,7 +91,7 @@ lib/
     ├── providers/
     │   └── api_service_provider.dart
     ├── services/
-    │   └── api_service.dart         # HTTP通信・全APIメソッド
+    │   └── api_service.dart         # HTTP通信・全APIメソッド（uploadVideo 追加済み）
     └── widgets/
         └── (共通ウィジェット)
 ```
@@ -101,6 +107,7 @@ lib/
 | `postDetailProvider` | `FutureProvider.family<Post, int>` | 投稿詳細 |
 | `likeNotifierProvider` | `StateNotifierProvider.family<LikeNotifier, AsyncValue<LikeStatus>, int>` | いいね状態・操作 |
 | `commentsProvider` | `FutureProvider.family<List<Comment>, int>` | コメント一覧 |
+| `myCarProvider` | `StateNotifierProvider<MyCarNotifier, MyCar>` | マイカー情報（SharedPreferences 永続化） |
 | `nhtsaMakersProvider` | `FutureProvider<List<String>>` | NHTSA メーカー一覧 |
 | `nhtsaModelsProvider` | `FutureProvider.family<List<String>, String>` | NHTSA 車種一覧 |
 
@@ -110,12 +117,17 @@ lib/
 PostListScreen（起点）
   ├─ [検索ボタン] → _FilterSheet（BottomSheet）
   ├─ [PostCard タップ] → PostDetailScreen
+  │     ├─ 画像投稿: InteractiveViewer で写真表示
+  │     ├─ 動画投稿: VideoPlayerWidget（シークバー・再生時間）で再生
   │     └─ [戻る] → postsProvider / myPostsProvider を invalidate
   ├─ [投稿するFAB] → CreatePostScreen
+  │     ├─ 画像選択 → AI検出 → MaskingPreviewScreen
+  │     └─ 動画選択（マスキングなし）
   └─ [AppBar]
         ├─ [ログイン] → LoginScreen
         └─ [アカウント]
               ├─ マイページ → MyPageScreen
+              │     ├─ マイカーセクション（登録/編集/削除）← _MyCarEditDialog
               │     ├─ [投稿タップ] → PostDetailScreen
               │     ├─ [編集] → _EditPostDialog（Dialog）
               │     └─ [削除] → 確認ダイアログ
@@ -153,7 +165,7 @@ Request
   ├─ /users/me/posts (GET, 認証必須)
   ├─ /posts (GET) ─── maker/model/tag/limit/offset クエリパラメータ
   ├─ /posts/:id (GET)
-  ├─ /posts (POST, 認証必須) ─── タグも保存
+  ├─ /posts (POST, 認証必須) ─── image_url または video_url が必須
   ├─ /posts/:id (PATCH, 認証必須・本人のみ) ─── タグ差し替え
   ├─ /posts/:id (DELETE, 認証必須・本人のみ) ─── 論理削除
   │
@@ -167,7 +179,8 @@ Request
   │
   ├─ /detect (POST, 認証必須) ─── Workers AI でナンバー検出のみ
   ├─ /upload (POST, 認証必須) ─── 検出＋マスキング＋R2保存
-  ├─ /images/:key (GET) ─── R2からフェッチ・リサイズ
+  ├─ /upload/video (POST, 認証必須) ─── 動画を R2 uploads/videos/ に保存（mp4/mov/webm/avi, 100MB 以下）
+  ├─ /images/:key (GET) ─── R2からフェッチ・リサイズ（動画はリサイズスキップ）
   │
   ├─ /auth/register (POST)
   ├─ /auth/login (POST)
@@ -252,6 +265,7 @@ POST /upload
 | `migrations/0002_remove_is_own_car.sql` | `is_own_car` カラム削除 |
 | `migrations/0004_add_likes_comments.sql` | `likes` / `comments` テーブル追加 |
 | `migrations/0005_add_tags.sql` | `post_tags` テーブル追加・INDEX作成 |
+| `migrations/0006_add_video_url.sql` | `posts.video_url TEXT` カラム追加 |
 
 > ※ `0003` は欠番（ロールバック済み）
 
@@ -282,6 +296,7 @@ INSERT INTO post_tags (post_id, tag) VALUES (?, ?), ...;
   "car_model": "GR86",
   "car_variant": "RZ",
   "image_url": "uploads/xxxxxxxx",
+  "video_url": null,
   "original_image_url": "uploads/original/xxxxxxxx",
   "description": "納車しました！",
   "created_at": "2026-04-01T00:00:00.000Z",
@@ -292,6 +307,8 @@ INSERT INTO post_tags (post_id, tag) VALUES (?, ?), ...;
 }
 ```
 
+> 画像投稿: `image_url` に値あり、`video_url` は `null`  
+> 動画投稿: `video_url` に値あり、`image_url` は空文字  
 > Flutter 側で `tags_csv` をカンマ分割して `List<String>` に変換
 
 ### 5.2 いいね状態オブジェクト

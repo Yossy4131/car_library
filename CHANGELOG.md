@@ -4,6 +4,62 @@
 
 ---
 
+## [v1.4.0] - 2026-04-03
+
+### ✨ 追加
+
+#### 動画投稿・再生機能（Phase 14）
+- 投稿画面のメディア選択シートに「ギャラリーから動画を選択」を追加
+- 動画選択時はマスキング処理をスキップ。mp4/mov/webm/avi、最大 100MB・3 分まで対応
+- `POST /upload/video` エンドポイントを Workers に追加（R2 `uploads/videos/` に保存）
+- `ApiService.uploadVideo()` / `VideoUploadResult` を Flutter 側に実装
+- `posts` テーブルに `video_url TEXT` カラムを追加（`migrations/0006_add_video_url.sql`）
+- `Post` モデルに `videoUrl`・`isVideo` getter・`thumbnailUrl` getter を追加
+- `VideoPlayerWidget` を新規作成（シークバー・再生時間・再生/一時停止ボタン付き）
+- 投稿カードに動画再生アイコン（▶）をオーバーレイ表示
+- 投稿詳細画面で `VideoPlayerWidget` による動画再生に対応
+- `video_player: ^2.9.2` を依存に追加
+
+### 🔧 改善
+
+- `MultipartFile` に `lookupMimeType` + `MediaType` で MIME タイプを設定し 400 エラーを修正
+- Workers の `/images/` エンドポイントで動画コンテンツタイプのリサイズスキップと `Accept-Ranges: bytes` ヘッダーを追加
+
+---
+
+## [v1.3.0] - 2026-04-03
+
+### ✨ 追加
+
+#### Google Analytics 導入（Phase 12）
+- `web/index.html` に GA4 タグ（`G-LW16XHMQZT`）を挿入
+
+---
+
+## [v1.2.0] - 2026-04-03
+
+### ✨ 追加
+
+#### マイカー登録機能（Phase 11）
+- マイページ上部にマイカーセクション（登録・編集・削除対応）を追加
+- `MyCar` モデルと `MyCarNotifier`（SharedPreferences にローカル保存）を新規作成
+- 新規投稿画面を開いた際にマイカー情報（メーカー・車種・型式）を自動入力
+
+---
+
+## [v1.1.0] - 2026-04-03
+
+### 🔧 改善
+
+#### 投稿時刻 JST 表示修正（Phase 13）
+- D1 の `CURRENT_TIMESTAMP` はタイムゾーン情報なしで UTC を返すため、`DateTime.parse()` がローカル時刻と誤解する問題を修正
+- `Post` / `LikeComment` モデルに `_parseUtc()` ヘルパーを追加（`Z` サフィックスを付加して UTC としてパース）
+
+#### マスキング最小サイズ調整
+- 手動マスキング領域の最小サイズを 50px → 10px に緩和
+
+---
+
 ## [v1.0.0] - 2026-04-01
 
 ### ✨ 追加

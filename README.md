@@ -12,14 +12,17 @@
 | フロントエンド | Flutter（iOS / Android / Web） |
 | API | Cloudflare Workers (TypeScript) |
 | データベース | Cloudflare D1 (SQLite) |
-| 画像ストレージ | Cloudflare R2 |
+| 動画・画像ストレージ | Cloudflare R2 |
 | 画像解析 | Workers AI (`detr-resnet-50`) |
 | 認証 | JWT (HS256) + PBKDF2 パスワードハッシュ |
 | CI/CD | Cloudflare Workers Git 連携（GitHub `main` ブランチ自動デプロイ） |
+| アナリティクス | Google Analytics (GA4) |
 
 ## 機能
 
-- **投稿 (Create):** 写真選択 → ナンバープレート自動検出 → 手動マスキング調整 → 投稿
+- **投稿 (Create):** 写真・動画選択 → ナンバープレート自動検出（画像のみ）→ 手動マスキング調整 → 投稿
+- **動画投稿:** ギャラリーから動画（mp4/mov/webm/avi、最大100MB・3分）を選択して投稿。詳細画面でシークバー付きプレイヤーで再生
+- **マイカー登録:** マイページにマイカー情報（メーカー・車種・型式）を登録。投稿時に自動入力される
 - **閲覧 (Read):** 一覧表示・詳細表示（未ログインでも閲覧可）、メーカー/車種/ハッシュタグで検索
 - **編集 (Update):** 自分の投稿のメーカー・車種・型式・説明・タグを編集（マイページから）
 - **削除 (Delete):** 自分の投稿のみ削除可能
@@ -51,12 +54,14 @@ npx wrangler d1 execute car-library-db --local --file=./schema.sql
 npx wrangler d1 execute car-library-db --local --file=./migrations/0001_add_users_table.sql
 npx wrangler d1 execute car-library-db --local --file=./migrations/0004_add_likes_comments.sql
 npx wrangler d1 execute car-library-db --local --file=./migrations/0005_add_tags.sql
+npx wrangler d1 execute car-library-db --local --file=./migrations/0006_add_video_url.sql
 
 # 本番（初回のみ）
 npx wrangler d1 execute car-library-db --remote --file=./schema.sql
 npx wrangler d1 execute car-library-db --remote --file=./migrations/0001_add_users_table.sql
 npx wrangler d1 execute car-library-db --remote --file=./migrations/0004_add_likes_comments.sql
 npx wrangler d1 execute car-library-db --remote --file=./migrations/0005_add_tags.sql
+npx wrangler d1 execute car-library-db --remote --file=./migrations/0006_add_video_url.sql
 ```
 
 ### 3. シークレットの設定
