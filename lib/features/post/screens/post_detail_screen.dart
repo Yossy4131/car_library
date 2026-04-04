@@ -27,6 +27,9 @@ class PostDetailScreen extends HookConsumerWidget {
 
     final commentController = useTextEditingController();
     final submitting = useState(false);
+    final pageController = usePageController();
+    final currentPage = useState(0);
+    final mediaItems = post.allMediaItems;
 
     Future<void> submitComment() async {
       final text = commentController.text.trim();
@@ -82,45 +85,79 @@ class PostDetailScreen extends HookConsumerWidget {
           // フル表示メディアエリア
           Expanded(
             flex: 5,
-            child: post.isVideo
-                ? VideoPlayerWidget(url: post.videoUrl!)
-                : InteractiveViewer(
-                    minScale: 0.5,
-                    maxScale: 5.0,
+            child: Stack(
+              children: [
+                PageView.builder(
+                  controller: pageController,
+                  onPageChanged: (page) => currentPage.value = page,
+                  itemCount: mediaItems.length,
+                  itemBuilder: (context, index) {
+                    final item = mediaItems[index];
+                    return item.isVideo
+                        ? VideoPlayerWidget(url: item.url)
+                        : _ZoomableImage(url: item.url);
+                  },
+                ),
+                // 前へボタン
+                if (mediaItems.length > 1 && currentPage.value > 0)
+                  Positioned(
+                    left: 8,
+                    top: 0,
+                    bottom: 0,
                     child: Center(
-                      child: Image.network(
-                        post.imageUrl,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.broken_image,
-                              size: 64,
-                              color: Colors.white38,
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              '画像を読み込めませんでした',
-                              style: TextStyle(color: Colors.white54),
-                            ),
-                          ],
+                      child: _NavButton(
+                        icon: Icons.chevron_left,
+                        onTap: () => pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
                         ),
-                        loadingBuilder: (_, child, progress) {
-                          if (progress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: progress.expectedTotalBytes != null
-                                  ? progress.cumulativeBytesLoaded /
-                                        progress.expectedTotalBytes!
-                                  : null,
-                              color: Colors.white54,
-                            ),
-                          );
-                        },
                       ),
                     ),
                   ),
+                // 次へボタン
+                if (mediaItems.length > 1 &&
+                    currentPage.value < mediaItems.length - 1)
+                  Positioned(
+                    right: 8,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: _NavButton(
+                        icon: Icons.chevron_right,
+                        onTap: () => pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        ),
+                      ),
+                    ),
+                  ),
+                // ページインジケーター（複数メディア時のみ表示）
+                if (mediaItems.length > 1)
+                  Positioned(
+                    bottom: 8,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        mediaItems.length,
+                        (i) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: i == currentPage.value ? 16 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: i == currentPage.value
+                                ? Colors.white
+                                : Colors.white38,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
 
           // 下部パネル（情報 + いいね + コメント）
@@ -408,6 +445,85 @@ class PostDetailScreen extends HookConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 左右ナビゲーションボタン
+class _NavButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _NavButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          color: Colors.black45,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 26),
+      ),
+    );
+  }
+}
+
+/// ズーム時のみパンを有効にし、PageView のスワイプを妨げない画像ウィジェット
+class _ZoomableImage extends HookWidget {
+  final String url;
+
+  const _ZoomableImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = useMemoized(() => TransformationController());
+    final isZoomed = useState(false);
+
+    useEffect(() {
+      void listener() {
+        isZoomed.value = controller.value.getMaxScaleOnAxis() > 1.01;
+      }
+
+      controller.addListener(listener);
+      return () => controller.removeListener(listener);
+    }, [controller]);
+
+    return InteractiveViewer(
+      transformationController: controller,
+      panEnabled: isZoomed.value,
+      minScale: 1.0,
+      maxScale: 5.0,
+      child: Center(
+        child: Image.network(
+          url,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.broken_image, size: 64, color: Colors.white38),
+              SizedBox(height: 12),
+              Text('画像を読み込めませんでした', style: TextStyle(color: Colors.white54)),
+            ],
+          ),
+          loadingBuilder: (_, child, progress) {
+            if (progress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                value: progress.expectedTotalBytes != null
+                    ? progress.cumulativeBytesLoaded /
+                          progress.expectedTotalBytes!
+                    : null,
+                color: Colors.white54,
+              ),
+            );
+          },
+        ),
       ),
     );
   }

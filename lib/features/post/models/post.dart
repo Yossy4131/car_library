@@ -1,3 +1,38 @@
+import 'dart:convert';
+
+/// 投稿に紐付く個別メディアアイテム（画像または動画）
+class MediaItem {
+  final String url;
+  final String type; // 'image' | 'video'
+  final String? originalUrl;
+  final int sortOrder;
+
+  const MediaItem({
+    required this.url,
+    required this.type,
+    this.originalUrl,
+    this.sortOrder = 0,
+  });
+
+  bool get isVideo => type == 'video';
+
+  factory MediaItem.fromJson(Map<String, dynamic> json) {
+    return MediaItem(
+      url: json['url'] as String,
+      type: (json['type'] as String?) ?? 'image',
+      originalUrl: json['original_url'] as String?,
+      sortOrder: (json['sort'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'url': url,
+    'type': type,
+    'original_url': originalUrl,
+    'sort': sortOrder,
+  };
+}
+
 /// 投稿データのモデルクラス
 class Post {
   final int id;
@@ -14,6 +49,7 @@ class Post {
   final int likesCount;
   final int commentsCount;
   final List<String> tags;
+  final List<MediaItem> mediaItems;
 
   Post({
     required this.id,
@@ -30,10 +66,25 @@ class Post {
     this.likesCount = 0,
     this.commentsCount = 0,
     this.tags = const [],
+    this.mediaItems = const [],
   });
 
   /// JSONからPostオブジェクトを生成
   factory Post.fromJson(Map<String, dynamic> json) {
+    List<MediaItem> parsedMedia = [];
+    final mediaJsonStr = json['media_items_json'] as String?;
+    if (mediaJsonStr != null &&
+        mediaJsonStr.isNotEmpty &&
+        mediaJsonStr != 'null') {
+      try {
+        final decoded = jsonDecode(mediaJsonStr) as List;
+        parsedMedia = decoded
+            .map((e) => MediaItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+        parsedMedia.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      } catch (_) {}
+    }
+
     return Post(
       id: json['id'] as int,
       userId: json['user_id'] as String,
@@ -54,6 +105,7 @@ class Post {
               .where((t) => t.isNotEmpty)
               .toList() ??
           [],
+      mediaItems: parsedMedia,
     );
   }
 
@@ -91,12 +143,35 @@ class Post {
     return parts.join(' ');
   }
 
-  /// 動画投稿かどうか
-  bool get isVideo => videoUrl != null && videoUrl!.isNotEmpty;
+  /// 実際のメディア一覧（post_media があればそちら、なければ旧フィールドからフォールバック）
+  List<MediaItem> get allMediaItems {
+    if (mediaItems.isNotEmpty) return mediaItems;
+    if (videoUrl != null && videoUrl!.isNotEmpty) {
+      return [MediaItem(url: videoUrl!, type: 'video')];
+    }
+    if (imageUrl.isNotEmpty) {
+      return [
+        MediaItem(url: imageUrl, type: 'image', originalUrl: originalImageUrl),
+      ];
+    }
+    return [];
+  }
+
+  int get mediaCount => allMediaItems.length;
+
+  /// 動画投稿かどうか（最初のメディアで判断）
+  bool get isVideo {
+    final items = allMediaItems;
+    return items.isNotEmpty && items.first.isVideo;
+  }
 
   /// サムネイル画像URL（動画はそのまま、画像は幅800pxリサイズ）
-  /// 一覧表示での転送量削減に使用する
-  String get thumbnailUrl => isVideo ? videoUrl! : '$imageUrl?w=800&q=80';
+  String get thumbnailUrl {
+    final items = allMediaItems;
+    if (items.isEmpty) return imageUrl;
+    final first = items.first;
+    return first.isVideo ? first.url : '${first.url}?w=800&q=80';
+  }
 
   /// コピーを作成
   Post copyWith({
@@ -114,6 +189,7 @@ class Post {
     int? likesCount,
     int? commentsCount,
     List<String>? tags,
+    List<MediaItem>? mediaItems,
   }) {
     return Post(
       id: id ?? this.id,
@@ -130,6 +206,7 @@ class Post {
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       tags: tags ?? this.tags,
+      mediaItems: mediaItems ?? this.mediaItems,
     );
   }
 }
@@ -144,6 +221,7 @@ class CreatePostRequest {
   final String? videoUrl;
   final String? description;
   final List<String> tags;
+  final List<MediaItem> mediaItems;
 
   CreatePostRequest({
     required this.userId,
@@ -154,6 +232,7 @@ class CreatePostRequest {
     this.videoUrl,
     this.description,
     this.tags = const [],
+    this.mediaItems = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -166,6 +245,7 @@ class CreatePostRequest {
       'video_url': videoUrl,
       'description': description,
       'tags': tags,
+      'media_items': mediaItems.map((m) => m.toJson()).toList(),
     };
   }
 }

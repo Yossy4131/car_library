@@ -241,6 +241,7 @@ class MaskingPreviewScreen extends HookWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
+                      minimumSize: const Size(64, 40),
                     ),
                   ),
               ],

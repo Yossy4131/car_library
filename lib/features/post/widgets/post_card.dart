@@ -93,6 +93,40 @@ class PostCard extends ConsumerWidget {
                         color: Colors.white70,
                       ),
                     ),
+                  // 複数メディアバッジ
+                  if (post.mediaCount > 1)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.photo_library,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${post.mediaCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   // 下部グラデーション
                   Positioned(
                     left: 0,

@@ -51,6 +51,19 @@ export default {
     const method = request.method;
 
     try {
+      // DB migration: post_media テーブルを作成（存在しない場合）
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS post_media (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          post_id INTEGER NOT NULL,
+          media_url TEXT NOT NULL,
+          media_type TEXT NOT NULL DEFAULT 'image',
+          original_url TEXT,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (post_id) REFERENCES posts(id)
+        )
+      `).run();
+
       // ========== 投稿関連のエンドポイント ==========
 
       // ========== 自分の投稿一覧取得 ==========
@@ -65,7 +78,9 @@ export default {
           `SELECT p.*,
             (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
             (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
-            (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv
+            (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv,
+            (SELECT json_group_array(json_object('url', media_url, 'type', media_type, 'original_url', COALESCE(original_url,''), 'sort', sort_order))
+             FROM (SELECT * FROM post_media WHERE post_id = p.id ORDER BY sort_order)) AS media_items_json
            FROM posts p WHERE p.user_id = ? AND p.deleted_at IS NULL ORDER BY p.created_at DESC`
         ).bind(userId).all();
         return jsonResponse({ posts: results });
@@ -82,7 +97,9 @@ export default {
         let query = `SELECT p.*,
           (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
           (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
-          (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv
+          (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv,
+          (SELECT json_group_array(json_object('url', media_url, 'type', media_type, 'original_url', COALESCE(original_url,''), 'sort', sort_order))
+           FROM (SELECT * FROM post_media WHERE post_id = p.id ORDER BY sort_order)) AS media_items_json
          FROM posts p WHERE p.deleted_at IS NULL`;
         const params: any[] = [];
 
@@ -112,7 +129,9 @@ export default {
           `SELECT p.*,
             (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
             (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
-            (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv
+            (SELECT GROUP_CONCAT(tag, ',') FROM post_tags WHERE post_id = p.id) AS tags_csv,
+            (SELECT json_group_array(json_object('url', media_url, 'type', media_type, 'original_url', COALESCE(original_url,''), 'sort', sort_order))
+             FROM (SELECT * FROM post_media WHERE post_id = p.id ORDER BY sort_order)) AS media_items_json
            FROM posts p WHERE p.id = ? AND p.deleted_at IS NULL`
         ).bind(id).all();
 
@@ -130,13 +149,13 @@ export default {
         }
 
         const body = await request.json() as any;
-        const { car_maker, car_model, car_variant, image_url, video_url, description, tags } = body;
+        const { car_maker, car_model, car_variant, image_url, video_url, description, tags, media_items } = body;
 
         if (!car_maker || !car_model) {
           return errorResponse('Missing required fields: car_maker, car_model');
         }
-        if (!image_url && !video_url) {
-          return errorResponse('image_url または video_url のどちらかは必須です');
+        if (!image_url && !video_url && (!Array.isArray(media_items) || media_items.length === 0)) {
+          return errorResponse('image_url または video_url または media_items のどれかは必須です');
         }
 
         const result = await env.DB.prepare(
@@ -153,6 +172,22 @@ export default {
         ).run();
 
         const postId = result.meta.last_row_id;
+
+        // メディアアイテムを post_media テーブルに保存
+        if (Array.isArray(media_items) && media_items.length > 0) {
+          const itemsToSave = media_items.slice(0, 10); // 最大10件
+          for (let i = 0; i < itemsToSave.length; i++) {
+            const item = itemsToSave[i] as any;
+            const mediaUrl = String(item.url || '');
+            const mediaType = item.type === 'video' ? 'video' : 'image';
+            const originalUrl = item.original_url ? String(item.original_url) : null;
+            if (mediaUrl) {
+              await env.DB.prepare(
+                'INSERT INTO post_media (post_id, media_url, media_type, original_url, sort_order) VALUES (?, ?, ?, ?, ?)'
+              ).bind(postId, mediaUrl, mediaType, originalUrl, i).run();
+            }
+          }
+        }
 
         // タグを保存
         if (Array.isArray(tags) && tags.length > 0) {
